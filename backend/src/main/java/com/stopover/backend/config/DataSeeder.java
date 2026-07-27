@@ -23,7 +23,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Solo sembramos si la tabla usuarios está vacía, para no duplicar cada vez que arranca la app
+      
         if (usuarioRepository.count() > 0) {
             return;
         }

@@ -20,8 +20,7 @@ public class Usuario {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    // Muchos usuarios pueden tener el mismo rol (relación N:1)
-    // FetchType.LAZY evita traer el rol completo cada vez que se consulta un usuario (previene problema N+1)
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;

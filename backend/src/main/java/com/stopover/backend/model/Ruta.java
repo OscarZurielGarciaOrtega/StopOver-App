@@ -29,7 +29,7 @@ public class Ruta {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    // Lado "dueño" de la relación N:M — aquí se define la tabla intermedia ruta_parada
+    
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "ruta_parada",

@@ -13,7 +13,7 @@ public class Rol {
     @Column(nullable = false, unique = true)
     private String nombre;
 
-    // Constructor vacío (JPA lo necesita para crear objetos al leer de la BD)
+    
     public Rol() {}
 
     // Getters y setters

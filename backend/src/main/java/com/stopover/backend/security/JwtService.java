@@ -37,7 +37,7 @@ public class JwtService {
                 .compact();
     }
 
-    // Extrae el email (subject) del token
+    
     public String extraerEmail(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -47,7 +47,7 @@ public class JwtService {
                 .getSubject();
     }
 
-    // Extrae el rol guardado en el token
+    
     public String extraerRol(String token) {
         return (String) Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -57,7 +57,7 @@ public class JwtService {
                 .get("rol");
     }
 
-    // Verifica que el token no esté expirado ni corrupto
+   
     public boolean esValido(String token) {
         try {
             Jwts.parser()

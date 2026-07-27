@@ -1,10 +1,9 @@
--- Agrega tipo de parada (cafeteria, mirador, gasolinera, restaurante, etc.)
+
 ALTER TABLE paradas ADD COLUMN tipo VARCHAR(50) NOT NULL DEFAULT 'OTRO';
 
--- Roles
+
 INSERT INTO roles (nombre) VALUES ('ADMIN'), ('USUARIO'), ('OPERADOR');
 
--- Paradas (15 registros, variedad de tipos para probar filtros)
 INSERT INTO paradas (nombre, latitud, longitud, tipo) VALUES
 ('Café Central Oaxaca', 17.0732, -96.7266, 'CAFETERIA'),
 ('Mirador Dominguillo', 17.4536, -96.9052, 'MIRADOR'),

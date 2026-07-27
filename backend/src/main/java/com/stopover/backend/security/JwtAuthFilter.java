@@ -32,18 +32,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // Sin token, dejamos pasar la petición (Spring Security decidirá si el endpoint la requiere o no)
+            
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7); // quita el prefijo "Bearer "
+        String token = authHeader.substring(7); 
 
         if (jwtService.esValido(token)) {
             String email = jwtService.extraerEmail(token);
             String rol = jwtService.extraerRol(token);
 
-            // ROLE_ es el prefijo que Spring Security espera para reconocer roles
+            
             var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + rol));
 
             var authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);

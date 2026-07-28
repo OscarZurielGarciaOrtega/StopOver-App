@@ -9,6 +9,9 @@ import Historial from './pages/Historial';
 import Favoritos from './pages/Favoritos';
 import Buscar from './pages/Buscar';
 import Ajustes from './pages/Ajustes';
+import MiNegocio from './pages/MiNegocio';
+import AdminUsuarios from './pages/AdminUsuarios';
+import AdminParadas from './pages/AdminParadas';
 
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -23,6 +26,10 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/recuperar" element={<Recovery />} />
+        <Route path="/mi-negocio" element={<MiNegocio />} />
+        <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+        <Route path="/admin/paradas" element={<AdminParadas />} />
+        
 
         
         <Route element={<ProtectedRoute />}>

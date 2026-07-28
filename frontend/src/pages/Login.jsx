@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../api/axios';
 import globe from '../assets/globe.png';
 
 export default function Login() {
@@ -7,6 +8,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -17,23 +20,36 @@ export default function Login() {
       newErrors.email = 'Ingresa un correo electrónico válido';
     }
 
-    // Regex estricta: 8 chars, 1 mayus, 1 min, 1 num, 1 especial
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!password) {
       newErrors.password = 'La contraseña es obligatoria';
-    } else if (!passwordRegex.test(password)) {
-      newErrors.password = 'Debe tener mín. 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial (@$!%*?&)';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      localStorage.setItem('token', 'fake-jwt-token-de-prueba');
+    setServerError('');
+
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      // Petición real al backend de Emma en el puerto 9000
+      const response = await api.post('/auth/login', { email, password });
+      
+      // Guardamos el token real y el rol que regresa el servidor
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('rol', response.data.rol);
+      
+      // Mandamos al usuario a su respectiva ruta o dashboard
       navigate('/nueva-ruta');
+    } catch (err) {
+      console.error(err);
+      setServerError('Credenciales incorrectas o error al conectar con el servidor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,16 +57,22 @@ export default function Login() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-        
+        {/* Lado izquierdo - Ilustración */}
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
           <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        
+        {/* Lado derecho - Formulario */}
         <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#FAFAF8]">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Bienvenido de vuelta!</h2>
           <p className="text-gray-500 font-medium mb-8">Ingresa tus datos para continuar tu viaje</p>
+
+          {serverError && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded-xl font-medium">
+              {serverError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -61,6 +83,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
+                  placeholder="admin@stopover.com"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,8 +102,8 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
+                  placeholder="••••••••"
                 />
-                
                 <div 
                   className="absolute inset-y-0 right-0 flex items-center pr-4 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
@@ -99,8 +122,12 @@ export default function Login() {
               <Link to="/recuperar" className="text-sm text-gray-500 hover:text-[#4F7959] font-medium">¿Olvidaste tu contraseña?</Link>
             </div>
 
-            <button type="submit" className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-4 rounded-xl transition-colors shadow-md">
-              ENTRAR
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-4 rounded-xl transition-colors shadow-md disabled:opacity-50"
+            >
+              {loading ? 'CONECTANDO...' : 'ENTRAR'}
             </button>
 
             <div className="text-center mt-4">

@@ -1,16 +1,116 @@
-import React from 'react';
-import Sidebar from '../components/Sidebar';
+import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function ChangeView({ center }) {
+  const map = useMap();
+  map.setView(center, map.getZoom());
+  return null;
+}
 
 export default function Dashboard() {
-  // Arreglo de datos simulando la base de datos para la tabla
-  const rutas = [
-    { id: '#ST-901', origen: 'Oaxaca', destino: 'Puebla', escala: 'Cafetería Centro Tehuacán', duracion: '4 h 15 m', estatus: 'En Tránsito' },
-    { id: '#ST-902', origen: 'Oaxaca', destino: 'CDMX', escala: 'Mirador Nochixtlán', duracion: '6 h 30 m', estatus: 'Completado' },
-    { id: '#ST-903', origen: 'Puebla', destino: 'CDMX', escala: 'Directo (Sin escala)', duracion: '2 h 00 m', estatus: 'Completado' },
-    { id: '#ST-904', origen: 'Oaxaca', destino: 'Pto. Escondido', escala: 'Pueblo Mágico Sola de Vega', duracion: '3 h 45 m', estatus: 'Retrasado' },
-  ];
+  // PERSISTENCIA REAL: Carga las rutas del navegador o usa las por defecto
+  const [rutas, setRutas] = useState(() => {
+    const guardadas = localStorage.getItem('stopover_rutas_reales');
+    if (guardadas) {
+      try {
+        return JSON.parse(guardadas);
+      } catch (e) {
+        console.error("Error al leer localStorage", e);
+      }
+    }
+    return [
+      { id: '#ST-901', origen: 'Oaxaca', destino: 'Puebla', escala: 'Cafetería Centro Tehuacán', duracion: '4 h 15 m', estatus: 'En Tránsito' },
+      { id: '#ST-902', origen: 'Oaxaca', destino: 'CDMX', escala: 'Mirador Nochixtlán', duracion: '6 h 30 m', estatus: 'Completado' },
+      { id: '#ST-903', origen: 'Puebla', destino: 'CDMX', escala: 'Directo (Sin escala)', duracion: '2 h 00 m', estatus: 'Completado' },
+      { id: '#ST-904', origen: 'Oaxaca', destino: 'Pto. Escondido', escala: 'Pueblo Mágico Sola de Vega', duracion: '3 h 45 m', estatus: 'Retrasado' },
+    ];
+  });
 
-  // Función para dar color a la etiqueta de estado
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [origenTexto, setOrigenTexto] = useState('Oaxaca de Juárez, México');
+  const [origenCoords, setOrigenCoords] = useState([17.0654, -96.7236]);
+  
+  const [destinoTexto, setDestinoTexto] = useState('');
+  const [destinoCoords, setDestinoCoords] = useState(null);
+
+  const [sugerenciasOrigen, setSugerenciasOrigen] = useState([]);
+  const [sugerenciasDestino, setSugerenciasDestino] = useState([]);
+
+  const [routeCoords, setRouteCoords] = useState([]);
+  const [distanciaKm, setDistanciaKm] = useState(null);
+  const [duracionTexto, setDuracionTexto] = useState(null);
+
+  // Estados para el modal de Ver Detalle
+  const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const buscarLugarAPI = async (texto, setSugerenciasState) => {
+    if (texto.trim().length < 2) {
+      setSugerenciasState([]);
+      return;
+    }
+    try {
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(texto)}&count=5&language=es&format=json`);
+      const data = await response.json();
+      
+      if (!data || !data.results) {
+        setSugerenciasState([]);
+        return;
+      }
+
+      const resultados = data.results.map(item => {
+        let label = item.name;
+        if (item.admin1) label += `, ${item.admin1}`;
+        if (item.country) label += `, ${item.country}`;
+
+        return {
+          label: label,
+          lat: item.latitude,
+          lon: item.longitude
+        };
+      });
+
+      setSugerenciasState(resultados);
+    } catch (error) {
+      console.error("Error al consultar la API:", error);
+      setSugerenciasState([]);
+    }
+  };
+
+  const calcularRutaCarretera = async (orig, dest) => {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${orig[1]},${orig[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coordsFormateadas = route.geometry.coordinates.map(c => [c[1], c[0]]);
+        setRouteCoords(coordsFormateadas);
+
+        const km = (route.distance / 1000).toFixed(1);
+        setDistanciaKm(km);
+
+        const horas = Math.floor(route.duration / 3600);
+        const minutos = Math.round((route.duration % 3600) / 60);
+        setDuracionTexto(`${horas > 0 ? horas + ' h ' : ''}${minutos} m`);
+      }
+    } catch (err) {
+      console.error("Error en OSRM:", err);
+      setRouteCoords([orig, dest]);
+    }
+  };
+
   const getStatusClass = (estatus) => {
     switch (estatus) {
       case 'En Tránsito': return 'bg-green-100 text-green-700';
@@ -20,12 +120,15 @@ export default function Dashboard() {
     }
   };
 
+  const mapCenter = destinoCoords 
+    ? [(origenCoords[0] + destinoCoords[0]) / 2, (origenCoords[1] + destinoCoords[1]) / 2] 
+    : origenCoords;
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#FAF9F6]">
       
       <header className="flex items-center justify-between px-8 py-4 bg-[#FAF9F6] border-b border-gray-200">
         <div className="flex items-center gap-2 text-[#2A4532]">
-          
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
@@ -39,8 +142,65 @@ export default function Dashboard() {
 
       <div className="flex flex-1">
         
-        <Sidebar />
-        
+        <aside className="w-64 bg-[#FAF9F6] border-r border-gray-200 flex flex-col pt-6">
+          <nav className="flex flex-col gap-1 px-4">
+            <NavLink
+              to="/nueva-ruta"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                }`
+              }
+            >
+              Nueva ruta
+            </NavLink>
+
+            <NavLink
+              to="/historial"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                }`
+              }
+            >
+              Historial
+            </NavLink>
+
+            <NavLink
+              to="/favoritos"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                }`
+              }
+            >
+              Favoritos
+            </NavLink>
+
+            <NavLink
+              to="/buscar"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                }`
+              }
+            >
+              Buscar
+            </NavLink>
+
+            <NavLink
+              to="/ajustes"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                }`
+              }
+            >
+              Ajustes
+            </NavLink>
+          </nav>
+        </aside>
+
         <main className="flex-1 p-8 bg-white rounded-tl-3xl shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-t border-l border-gray-100 flex flex-col">
           
           <div className="flex justify-between items-end mb-6">
@@ -48,7 +208,15 @@ export default function Dashboard() {
               <h2 className="text-xl font-bold text-gray-800">Rutas recientes</h2>
               <p className="text-sm text-gray-500 mt-1">Basado en tu ruta de Oaxaca a Puebla</p>
             </div>
-            <button className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[#1E3324] transition-colors shadow-md">
+            <button 
+              onClick={() => {
+                setIsMapModalOpen(true);
+                setRouteCoords([]);
+                setDistanciaKm(null);
+                setDuracionTexto(null);
+              }}
+              className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[#1E3324] transition-colors shadow-md cursor-pointer"
+            >
               <span className="text-xl leading-none">+</span> Planear nueva parada
             </button>
           </div>
@@ -92,7 +260,13 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="py-4 px-2">
-                      <button className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline">
+                      <button 
+                        onClick={() => {
+                          setRutaSeleccionada(ruta);
+                          setIsDetailModalOpen(true);
+                        }}
+                        className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
+                      >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                         Ver detalle
                       </button>
@@ -116,20 +290,16 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-10 flex-1">
-            
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-gray-500 mb-4">Categorías más buscadas</h3>
               <div className="flex flex-col gap-3">
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
                   Cafeterías
                 </button>
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
                   Miradores
                 </button>
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
                   Pueblos mágicos
                 </button>
               </div>
@@ -158,6 +328,196 @@ export default function Dashboard() {
 
         </main>
       </div>
+
+      
+      {isMapModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-visible">
+            
+            <div className="bg-[#2A4532] text-white px-6 py-4 rounded-t-3xl flex justify-between items-center">
+              <h3 className="text-lg font-bold">Planea tu ruta</h3>
+              <button onClick={() => setIsMapModalOpen(false)} className="text-white/80 hover:text-white text-xl font-bold cursor-pointer">✕</button>
+            </div>
+
+            <div className="p-6 flex flex-col gap-4 overflow-visible">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative overflow-visible">
+                
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Origen del viaje</label>
+                  <input 
+                    type="text" 
+                    value={origenTexto}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setOrigenTexto(val);
+                      buscarLugarAPI(val, setSugerenciasOrigen);
+                    }}
+                    placeholder="Escribe origen..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#2A4532]"
+                  />
+                  
+                  {sugerenciasOrigen.length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                      {sugerenciasOrigen.map((item, idx) => (
+                        <li 
+                          key={idx}
+                          onClick={() => {
+                            setOrigenTexto(item.label);
+                            const nuevasCoords = [item.lat, item.lon];
+                            setOrigenCoords(nuevasCoords);
+                            setSugerenciasOrigen([]);
+                            if (destinoCoords) calcularRutaCarretera(nuevasCoords, destinoCoords);
+                          }}
+                          className="px-4 py-2.5 text-xs text-gray-700 hover:bg-[#CBE3C7]/60 cursor-pointer font-medium border-b border-gray-50"
+                        >
+                          📍 {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Destino</label>
+                  <input 
+                    type="text" 
+                    value={destinoTexto}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDestinoTexto(val);
+                      buscarLugarAPI(val, setSugerenciasDestino);
+                    }}
+                    placeholder="Escribe destino..." 
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#2A4532]"
+                  />
+
+                  {sugerenciasDestino.length > 0 && (
+                    <ul className="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                      {sugerenciasDestino.map((item, idx) => (
+                        <li 
+                          key={idx}
+                          onClick={() => {
+                            setDestinoTexto(item.label);
+                            const nuevasCoords = [item.lat, item.lon];
+                            setDestinoCoords(nuevasCoords);
+                            setSugerenciasDestino([]);
+                            calcularRutaCarretera(origenCoords, nuevasCoords);
+                          }}
+                          className="px-4 py-2.5 text-xs text-gray-700 hover:bg-[#CBE3C7]/60 cursor-pointer font-medium border-b border-gray-50"
+                        >
+                          🎯 {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+              </div>
+
+              {distanciaKm && duracionTexto && (
+                <div className="bg-[#CBE3C7]/40 border border-[#2A4532]/20 rounded-2xl p-3 flex justify-around text-center text-xs sm:text-sm font-bold text-[#2A4532]">
+                  <div>🚗 Distancia: <span className="text-black font-normal">{distanciaKm} km</span></div>
+                  <div>⏱️ Tiempo estimado: <span className="text-black font-normal">{duracionTexto}</span></div>
+                </div>
+              )}
+
+              <div className="relative w-full h-72 rounded-2xl overflow-hidden border border-gray-200 shadow-inner z-10 mt-2">
+                <MapContainer 
+                  center={mapCenter} 
+                  zoom={destinoCoords ? 7 : 13} 
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <ChangeView center={mapCenter} />
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  
+                  <Marker position={origenCoords}>
+                    <Popup>Origen: {origenTexto}</Popup>
+                  </Marker>
+
+                  {destinoCoords && (
+                    <>
+                      <Marker position={destinoCoords}>
+                        <Popup>Destino: {destinoTexto}</Popup>
+                      </Marker>
+                      <Polyline 
+                        positions={routeCoords.length > 0 ? routeCoords : [origenCoords, destinoCoords]} 
+                        color="#2A4532" 
+                        weight={5} 
+                      />
+                    </>
+                  )}
+                </MapContainer>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-2">
+                <button 
+                  onClick={() => setIsMapModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    if (!origenTexto || !destinoCoords) {
+                      alert('Por favor selecciona un destino válido de la lista.');
+                      return;
+                    }
+                    const nuevaRutaObj = {
+                      id: `#ST-90${rutas.length + 1}`,
+                      origen: origenTexto.split(',')[0],
+                      destino: destinoTexto.split(',')[0],
+                      escala: `${distanciaKm || '0'} km por carretera`,
+                      duracion: duracionTexto || 'Calculado',
+                      estatus: 'En Tránsito'
+                    };
+                    
+                    // PERSISTENCIA REAL EN LOCALSTORAGE
+                    const rutasActualizadas = [nuevaRutaObj, ...rutas];
+                    setRutas(rutasActualizadas);
+                    localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
+
+                    setIsMapModalOpen(false);
+                  }}
+                  className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer"
+                >
+                  Trazar Ruta y Guardar
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VER DETALLE */}
+      {isDetailModalOpen && rutaSeleccionada && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-lg font-bold text-[#2A4532]">Detalle de Ruta: {rutaSeleccionada.id}</h3>
+              <button onClick={() => setIsDetailModalOpen(false)} className="text-gray-500 font-bold text-lg cursor-pointer">✕</button>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700">
+              <p><strong>📍 Origen → Destino:</strong> {rutaSeleccionada.origen} → {rutaSeleccionada.destino}</p>
+              <p><strong>🛣️ Distancia / Escala:</strong> {rutaSeleccionada.escala}</p>
+              <p><strong>⏱️ Duración estimada:</strong> {rutaSeleccionada.duracion}</p>
+              <p><strong>🟢 Estatus:</strong> <span className="font-semibold text-green-600">{rutaSeleccionada.estatus}</span></p>
+            </div>
+            <button 
+              onClick={() => setIsDetailModalOpen(false)}
+              className="mt-4 bg-[#2A4532] text-white py-2.5 rounded-xl font-bold text-sm cursor-pointer hover:bg-[#1E3324] transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

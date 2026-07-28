@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import DetailModal from '../components/DetailModal';
+import RecommendationsModal from '../components/RecommendationsModal';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -54,11 +56,42 @@ export default function Dashboard() {
   const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [isRecModalOpen, setIsRecModalOpen] = useState(false);
+
+  const abrirRecomendaciones = (categoria) => {
+    setCategoriaSeleccionada(categoria);
+    setIsRecModalOpen(true);
+  };
+
+  // 👇 LA FUNCIÓN AHORA SÍ ESTÁ EN EL LUGAR CORRECTO 👇
+  const agregarParadaARuta = (paradaSeleccionada) => {
+    const rutasActualizadas = [...rutas]; // Clonamos tu arreglo de rutas
+    
+    if (rutasActualizadas.length > 0) {
+      const rutaActiva = rutasActualizadas[0]; // Tomamos la ruta más reciente (la de hasta arriba)
+      
+      // Lógica: Si la escala dice "km por carretera" o "Directo", la sobreescribimos. Si ya tiene una parada, se la sumamos con una coma.
+      if (rutaActiva.escala.includes('km') || rutaActiva.escala.includes('Directo')) {
+        rutaActiva.escala = paradaSeleccionada.nombre;
+      } else {
+        rutaActiva.escala = rutaActiva.escala + ', ' + paradaSeleccionada.nombre;
+      }
+      
+      // Actualizamos el estado y el LocalStorage
+      setRutas(rutasActualizadas);
+      localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
+    }
+    
+    setIsRecModalOpen(false); // Cerramos el modal
+  };
+
   const buscarLugarAPI = async (texto, setSugerenciasState) => {
     if (texto.trim().length < 2) {
       setSugerenciasState([]);
       return;
     }
+    
     try {
       const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(texto)}&count=5&language=es&format=json`);
       const data = await response.json();
@@ -293,14 +326,28 @@ export default function Dashboard() {
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-gray-500 mb-4">Categorías más buscadas</h3>
               <div className="flex flex-col gap-3">
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
-                  Cafeterías
+                <button 
+                  onClick={() => abrirRecomendaciones('Cafeterías')}
+                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                >
+                  <span className="flex items-center gap-2">☕ Cafeterías</span>
+                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
                 </button>
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
-                  Miradores
+                
+                <button 
+                  onClick={() => abrirRecomendaciones('Miradores')}
+                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                >
+                  <span className="flex items-center gap-2">📸 Miradores</span>
+                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
                 </button>
-                <button className="w-full flex items-center gap-4 bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-colors cursor-pointer">
-                  Pueblos mágicos
+                
+                <button 
+                  onClick={() => abrirRecomendaciones('Pueblos mágicos')}
+                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                >
+                  <span className="flex items-center gap-2">✨ Pueblos mágicos</span>
+                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
                 </button>
               </div>
             </div>
@@ -494,29 +541,21 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MODAL VER DETALLE */}
-      {isDetailModalOpen && rutaSeleccionada && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-lg font-bold text-[#2A4532]">Detalle de Ruta: {rutaSeleccionada.id}</h3>
-              <button onClick={() => setIsDetailModalOpen(false)} className="text-gray-500 font-bold text-lg cursor-pointer">✕</button>
-            </div>
-            <div className="space-y-3 text-sm text-gray-700">
-              <p><strong>📍 Origen → Destino:</strong> {rutaSeleccionada.origen} → {rutaSeleccionada.destino}</p>
-              <p><strong>🛣️ Distancia / Escala:</strong> {rutaSeleccionada.escala}</p>
-              <p><strong>⏱️ Duración estimada:</strong> {rutaSeleccionada.duracion}</p>
-              <p><strong>🟢 Estatus:</strong> <span className="font-semibold text-green-600">{rutaSeleccionada.estatus}</span></p>
-            </div>
-            <button 
-              onClick={() => setIsDetailModalOpen(false)}
-              className="mt-4 bg-[#2A4532] text-white py-2.5 rounded-xl font-bold text-sm cursor-pointer hover:bg-[#1E3324] transition-colors"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      {/* MODAL VER DETALLE EXTERNO */}
+      <DetailModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        rutaId={rutaSeleccionada ? rutaSeleccionada.id : null}
+      />
+
+      {/* MODAL DE RECOMENDACIONES DE CATEGORÍAS */}
+      <RecommendationsModal 
+        isOpen={isRecModalOpen}
+        onClose={() => setIsRecModalOpen(false)}
+        categoria={categoriaSeleccionada}
+        destinoRuta={rutas[0]?.destino}
+        onAgregar={agregarParadaARuta}
+      />
 
     </div>
   );

@@ -49,6 +49,10 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> manejarGeneral(Exception ex) {
+
+        // TEMPORAL: imprime el error real en consola para depurar 
+    ex.printStackTrace();
+
         ErrorResponse body = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(), // 500
                 "Error interno del servidor",

@@ -13,7 +13,7 @@ public class RegistroRequest {
     @Email(message = "El formato del email no es válido")
     private String email;
 
-    // Mínimo 8 caracteres, una mayúscula, un número y un carácter especial (lo pide el enunciado)
+    // Mínimo 8 caracteres, una mayúscula, un número y un carácter especial 
     @NotBlank(message = "La contraseña es obligatoria")
     @Pattern(
         regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,}$",

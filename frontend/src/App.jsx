@@ -9,23 +9,29 @@ import Historial from './pages/Historial';
 import Favoritos from './pages/Favoritos';
 import Buscar from './pages/Buscar';
 import Ajustes from './pages/Ajustes';
+
+
+import ProtectedRoute from './components/ProtectedRoute';
+
 import './index.css';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        
+       
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/recuperar" element={<Recovery />} />
 
         
-        <Route path="/nueva-ruta" element={<Dashboard />} />
-        <Route path="/historial" element={<Historial />} />
-        <Route path="/favoritos" element={<Favoritos />} />
-        <Route path="/buscar" element={<Buscar />} />
-        <Route path="/ajustes" element={<Ajustes />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/nueva-ruta" element={<Dashboard />} />
+          <Route path="/historial" element={<Historial />} />
+          <Route path="/favoritos" element={<Favoritos />} />
+          <Route path="/buscar" element={<Buscar />} />
+          <Route path="/ajustes" element={<Ajustes />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

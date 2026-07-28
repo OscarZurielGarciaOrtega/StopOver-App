@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import globe from '../assets/globe.png';
 
 export default function Recovery() {
@@ -75,9 +76,9 @@ export default function Recovery() {
             </button>
 
             <div className="text-center mt-6">
-              <span className="text-sm text-gray-400 font-medium">¿Ya te acordaste? </span>
-              <a href="#" className="text-sm text-[#4F7959] font-bold hover:underline">Inicia sesión</a>
-            </div>
+  <span className="text-sm text-gray-400 font-medium">¿Ya te acordaste? </span>
+  <Link to="/" className="text-sm text-[#4F7959] font-bold hover:underline">Inicia sesión</Link>
+</div>
 
           </form>
         </div>

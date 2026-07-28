@@ -1,40 +1,35 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import globe from '../assets/globe.png';
 
 export default function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const validateForm = () => {
     const newErrors = {};
-
-    
-    if (!name.trim()) {
-      newErrors.name = 'El nombre completo es obligatorio';
-    }
-
-    
-    if (!email) {
+    if (!formData.name) newErrors.name = 'El nombre es obligatorio';
+    if (!formData.email) {
       newErrors.email = 'El correo es obligatorio';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Ingresa un correo electrónico válido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Correo inválido';
     }
 
-    
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!password) {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!formData.password) {
       newErrors.password = 'La contraseña es obligatoria';
-    } else if (!passwordRegex.test(password)) {
-      newErrors.password = 'Debe tener mín. 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial (@$!%*?&)';
+    } else if (!passwordRegex.test(formData.password)) {
+      newErrors.password = 'Mín. 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial (@$!%*?&)';
     }
 
-    
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Debes confirmar tu contraseña';
-    } else if (password !== confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
@@ -45,138 +40,107 @@ export default function Register() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log('Formulario de registro válido, listo para enviar a la API');
-      // Aquí irá el Axios.post a la ruta de registro de Spring Boot
+      localStorage.setItem('token', 'fake-jwt-token-de-prueba');
+      navigate('/nueva-ruta');
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
-      
-      
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-       
+        {/* Izquierda */}
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
-          <img 
-            src={globe} 
-            alt="Ilustración StopOver" 
-            className="w-full max-w-[250px] object-contain drop-shadow-xl"
-          />
+          <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        
-        <div className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-[#FAFAF8]">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">¡Únete al viaje!</h2>
-          <p className="text-gray-500 font-medium mb-8 text-center">Crea tu cuenta y empieza a planear</p>
+        {/* Derecha */}
+        <div className="w-full md:w-7/12 p-8 md:px-16 md:py-10 flex flex-col justify-center bg-[#FAFAF8]">
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">¡Únete al viaje!</h2>
+          <p className="text-gray-500 font-medium mb-6">Crea tu cuenta y empieza a planear</p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
-            
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-extrabold text-gray-900 mb-2">Nombre completo</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.name ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm transition-colors`}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                  
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                </div>
-              </div>
+              <label className="block text-sm font-extrabold text-gray-900 mb-1">Nombre completo</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 rounded-xl border-2 ${errors.name ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959]`}
+              />
               {errors.name && <p className="text-red-500 text-xs font-semibold mt-1">{errors.name}</p>}
             </div>
 
-            
             <div>
-              <label className="block text-sm font-extrabold text-gray-900 mb-2">Correo electrónico</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm transition-colors`}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                  
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                  </svg>
-                </div>
-              </div>
+              <label className="block text-sm font-extrabold text-gray-900 mb-1">Correo electrónico</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959]`}
+              />
               {errors.email && <p className="text-red-500 text-xs font-semibold mt-1">{errors.email}</p>}
             </div>
 
-            
             <div>
-              <label className="block text-sm font-extrabold text-gray-900 mb-2">Contraseña</label>
+              <label className="block text-sm font-extrabold text-gray-900 mb-1">Contraseña</label>
               <div className="relative">
-                
                 <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm transition-colors pl-4 pr-16`}
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-2.5 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959]`}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-4 space-x-2">
-                   
-                   <svg className="w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                   </svg>
-                  
-                  <svg className="w-6 h-6 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
+                <div 
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m14.41 14.41l-3.59-3.59"></path></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                  )}
                 </div>
               </div>
-              {errors.password && <p className="text-red-500 text-xs font-semibold mt-1 leading-tight">{errors.password}</p>}
+              {errors.password && <p className="text-red-500 text-xs font-semibold mt-1">{errors.password}</p>}
             </div>
 
-            
             <div>
-              <label className="block text-sm font-extrabold text-gray-900 mb-2">Confirmar contraseña</label>
+              <label className="block text-sm font-extrabold text-gray-900 mb-1">Confirmar contraseña</label>
               <div className="relative">
                 <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border-2 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm transition-colors pl-4 pr-16`}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-2.5 rounded-xl border-2 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959]`}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-4 space-x-2">
-                   
-                   <svg className="w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                   </svg>
-                  
-                  <svg className="w-6 h-6 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
+                <div 
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 cursor-pointer text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m14.41 14.41l-3.59-3.59"></path></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                  )}
                 </div>
               </div>
               {errors.confirmPassword && <p className="text-red-500 text-xs font-semibold mt-1">{errors.confirmPassword}</p>}
             </div>
 
-            
-            <button
-              type="submit"
-              className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-4 rounded-xl transition-colors shadow-md mt-4"
-            >
+            <button type="submit" className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-3.5 rounded-xl transition-colors shadow-md mt-2">
               CREAR CUENTA
             </button>
 
-            <div className="text-center mt-6">
+            <div className="text-center mt-4">
               <span className="text-sm text-gray-400 font-medium">¿Ya tienes cuenta? </span>
-              <a href="#" className="text-sm text-[#4F7959] font-bold hover:underline">Inicia sesión</a>
+              <Link to="/" className="text-sm text-[#4F7959] font-bold hover:underline">Inicia sesión</Link>
             </div>
-
           </form>
         </div>
       </div>

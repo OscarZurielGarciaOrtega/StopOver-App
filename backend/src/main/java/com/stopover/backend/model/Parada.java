@@ -25,10 +25,19 @@ public class Parada {
     @Column(nullable = false)
     private String tipo; // CAFETERIA, MIRADOR, GASOLINERA, RESTAURANTE, OTRO
 
-    // Lado "inverso" de la relación N:M — mappedBy indica que Ruta es quien controla la tabla intermedia
-    // FetchType.LAZY: no carga las rutas relacionadas a menos que se pidan explícitamente (evita problema N+1)
+    
     @ManyToMany(mappedBy = "paradas", fetch = FetchType.LAZY)
     private Set<Ruta> rutas = new HashSet<>();
+
+    
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "propietario_id")
+private Usuario propietario;
+
+
+
+public Usuario getPropietario() { return propietario; }
+public void setPropietario(Usuario propietario) { this.propietario = propietario; }
 
     public Parada() {}
 

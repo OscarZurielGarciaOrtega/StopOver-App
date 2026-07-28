@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -45,6 +46,18 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
+
+    
+@ExceptionHandler(AccessDeniedException.class)
+public ResponseEntity<ErrorResponse> manejarAccesoDenegado(AccessDeniedException ex) {
+    ErrorResponse body = new ErrorResponse(
+            HttpStatus.FORBIDDEN.value(), // 403
+            "Acceso denegado",
+            List.of("No tienes permisos suficientes para realizar esta acción")
+    );
+
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+}
 
     
     @ExceptionHandler(Exception.class)

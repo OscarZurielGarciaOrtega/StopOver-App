@@ -5,7 +5,7 @@ import globe from '../assets/globe.png';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // <--- Estado para el ojito
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
@@ -41,13 +41,13 @@ export default function Login() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-        {/* Izquierda */}
+        
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
           <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        {/* Derecha */}
+        
         <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#FAFAF8]">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Bienvenido de vuelta!</h2>
           <p className="text-gray-500 font-medium mb-8">Ingresa tus datos para continuar tu viaje</p>
@@ -75,12 +75,12 @@ export default function Login() {
               <label className="block text-sm font-extrabold text-gray-900 mb-2">Contraseña</label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'} // <--- Cambia dinámicamente según el estado
+                  type={showPassword ? 'text' : 'password'} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
                 />
-                {/* Botón del ojito funcional */}
+                
                 <div 
                   className="absolute inset-y-0 right-0 flex items-center pr-4 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}

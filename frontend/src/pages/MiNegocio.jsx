@@ -7,6 +7,14 @@ export default function MiNegocio() {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
+  // 👤 CARGAR PERFIL DEL USUARIO DESDE LOCALSTORAGE
+  const [avatar, setAvatar] = useState(() => {
+    return localStorage.getItem('stopover_user_avatar') || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=150&q=80';
+  });
+  const [nombreUsuario, setNombreUsuario] = useState(() => {
+    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+  });
+
   // ESTADOS DEL FORMULARIO DEL NEGOCIO (Persistentes con localStorage)
   const [nombreNegocio, setNombreNegocio] = useState(() => {
     return localStorage.getItem('stopover_negocio_nombre') || 'Café de Nadie';
@@ -24,6 +32,37 @@ export default function MiNegocio() {
     return localStorage.getItem('stopover_negocio_descripcion') || 'El mejor café de especialidad para recargar energía antes de llegar a la ciudad. Contamos con internet de alta velocidad y estacionamiento seguro.';
   });
 
+  // 🖼️ ESTADO PARA LA FOTO PRINCIPAL DEL NEGOCIO (Base64 persistente)
+  const [imagenNegocio, setImagenNegocio] = useState(() => {
+    return localStorage.getItem('stopover_negocio_imagen') || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80';
+  });
+
+  // 🔔 ESTADOS PARA EL MODAL DE ALERTAS PERSONALIZADO
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertIsError, setAlertIsError] = useState(false);
+
+  const mostrarAlerta = (mensaje, esError = false) => {
+    setAlertMessage(mensaje);
+    setAlertIsError(esError);
+    setAlertModalOpen(true);
+  };
+
+  // 🛠️ FUNCIÓN PARA SUBIR Y CONVERTIR LA IMAGEN A BASE64
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setImagenNegocio(base64String);
+        localStorage.setItem('stopover_negocio_imagen', base64String);
+        mostrarAlerta('¡Imagen del establecimiento actualizada con éxito!');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // FUNCIÓN PARA GUARDAR CAMBIOS REALES
   const handleGuardarNegocio = () => {
     localStorage.setItem('stopover_negocio_nombre', nombreNegocio);
@@ -32,7 +71,7 @@ export default function MiNegocio() {
     localStorage.setItem('stopover_negocio_estatus', estatusVisibilidad);
     localStorage.setItem('stopover_negocio_descripcion', descripcion);
     
-    alert('¡Información del negocio actualizada y guardada con éxito!');
+    mostrarAlerta('¡Información del negocio actualizada y guardada con éxito en el sistema!');
   };
 
   return (
@@ -47,9 +86,9 @@ export default function MiNegocio() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold mr-2 ${isDarkMode ? 'bg-emerald-900/60 text-emerald-300' : 'bg-[#CBE3C7] text-[#2A4532]'}`}>PROPIETARIO</span>
-          <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=150&q=80" alt="Perfil Negocio" className="w-10 h-10 rounded-full border-2 border-[#4F7959] object-cover" />
-          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombreNegocio}</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold mr-2 ${isDarkMode ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-800/50' : 'bg-[#CBE3C7] text-[#2A4532]'}`}>PROPIETARIO</span>
+          <img src={avatar} alt="Perfil Negocio" className="w-10 h-10 rounded-full border-2 border-[#4F7959] object-cover bg-white" />
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombreUsuario}</span>
         </div>
       </header>
 
@@ -151,14 +190,37 @@ export default function MiNegocio() {
               ></textarea>
             </div>
 
+            {/* FOTOGRAFÍA PRINCIPAL INTERACTIVA */}
             <div className="mt-6">
               <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Fotografía principal</label>
-              <div className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isDarkMode ? 'border-gray-700 bg-gray-900 hover:border-gray-500' : 'border-gray-300 bg-[#FAF9F6] hover:bg-gray-50 hover:border-[#4F7959]'}`}>
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <span className="text-[#4F7959] font-bold">Subir nueva imagen</span>
+              
+              <input 
+                type="file" 
+                id="upload-negocio-img" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageChange}
+              />
+
+              <label 
+                htmlFor="upload-negocio-img"
+                className={`border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors relative overflow-hidden group ${
+                  isDarkMode ? 'border-gray-700 bg-gray-900 hover:border-gray-500' : 'border-gray-300 bg-[#FAF9F6] hover:bg-gray-50 hover:border-[#4F7959]'
+                }`}
+              >
+                {/* Vista previa de la imagen actual */}
+                <div className="w-full h-40 rounded-xl overflow-hidden mb-2 relative shadow-sm">
+                  <img src={imagenNegocio} alt="Establecimiento" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-white font-bold text-sm bg-black/50 px-3 py-1 rounded-lg backdrop-blur-sm">Cambiar imagen</span>
+                  </div>
+                </div>
+
+                <span className="text-[#4F7959] font-bold text-sm">Haz clic para subir nueva imagen</span>
                 <p className="text-xs text-gray-400 mt-1">PNG, JPG hasta 5MB</p>
-              </div>
+              </label>
             </div>
+
           </div>
 
           <footer className="text-center text-sm text-gray-500 pt-10 mt-auto">
@@ -167,6 +229,30 @@ export default function MiNegocio() {
 
         </main>
       </div>
+
+      {/* 🟢 MODAL DE ALERTAS PERSONALIZADO */}
+      {alertModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+          <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
+            <div className="flex justify-center mb-4">
+              <span className="text-5xl">{alertIsError ? '⚠️' : '✅'}</span>
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              {alertIsError ? 'Atención' : '¡Éxito!'}
+            </h3>
+            <p className={`text-sm mb-8 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              {alertMessage}
+            </p>
+            <button
+              onClick={() => setAlertModalOpen(false)}
+              className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer w-full"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

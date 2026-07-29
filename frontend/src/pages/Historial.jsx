@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
+import HistorialDetailModal from '../components/HistorialDetailModal';
 import Sidebar from '../components/Sidebar'; 
 
 export default function Historial() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
@@ -11,7 +11,11 @@ export default function Historial() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rutaAEliminar, setRutaAEliminar] = useState(null);
 
-  // PERSISTENCIA REAL: Sincronizado con el localStorage del Dashboard
+  // Estados para abrir el Modal de Detalle
+  const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // PERSISTENCIA REAL
   const [rutas, setRutas] = useState(() => {
     const guardadas = localStorage.getItem('stopover_rutas_reales');
     if (guardadas) {
@@ -29,11 +33,9 @@ export default function Historial() {
     ];
   });
 
-  // ESTADOS PARA LOS FILTROS
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('Todos');
 
-  // Guardar cambios en localStorage automáticamente cuando se elimine una ruta
   useEffect(() => {
     localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutas));
   }, [rutas]);
@@ -60,7 +62,15 @@ export default function Historial() {
     setIsModalOpen(false);
   };
 
-  // 🧮 FILTRAR RUTAS SEGÚN BÚSQUEDA Y ESTATUS
+  // Función para cancelar ruta desde el detalle
+  const cancelarRuta = (idRuta) => {
+    const rutasActualizadas = rutas.map(ruta => 
+      ruta.id === idRuta ? { ...ruta, estatus: 'Cancelado' } : ruta
+    );
+    setRutas(rutasActualizadas);
+    setIsDetailModalOpen(false);
+  };
+
   const rutasFiltradas = rutas.filter(ruta => {
     const textoMatch = 
       ruta.id.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
@@ -69,15 +79,12 @@ export default function Historial() {
       ruta.escala.toLowerCase().includes(busquedaTexto.toLowerCase());
     
     const estatusMatch = filtroEstatus === 'Todos' || ruta.estatus === filtroEstatus;
-
     return textoMatch && estatusMatch;
   });
 
-  // 📊 ESTADÍSTICAS DINÁMICAS (Calculadas de las rutas reales)
-  const totalCompletadas = rutas.filter(r => r.estatus === 'Completado').length + 8; // Base estética + reales
-  const horasCamino = rutas.length * 12 + 2; // Simulado dinámico en base al volumen de rutas
+  const totalCompletadas = rutas.filter(r => r.estatus === 'Completado').length + 8;
+  const horasCamino = rutas.length * 12 + 2; 
 
-  // Calcular parada más frecuente basada en las escalas guardadas
   const conteoEscalas = {};
   rutas.forEach(r => {
     if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo')) {
@@ -125,7 +132,6 @@ export default function Historial() {
             </div>
           </div>
 
-          {/* TARJETAS DE ESTADÍSTICAS EN VIVO */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-between h-32 transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Rutas completadas</span>
@@ -143,7 +149,6 @@ export default function Historial() {
 
           <div className={`p-6 rounded-2xl shadow-sm border flex-1 flex flex-col transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             
-            {/* INPUTS DE FILTRADO */}
             <div className="flex gap-4 mb-6">
               <input 
                 type="text" 
@@ -192,8 +197,19 @@ export default function Historial() {
                         <td className="py-4 px-2">{ruta.duracion}</td>
                         <td className="py-4 px-2"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>{ruta.estatus}</span></td>
                         <td className="py-4 px-2 flex items-center gap-3">
-                          <button className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer">Ver detalle</button>
-                          <button onClick={() => handleOpenModal(ruta.id)} className="text-red-500 hover:text-red-700 font-semibold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">Eliminar</button>
+                          
+                          {/* BOTÓN CONECTADO PARA ABRIR DETAIL MODAL */}
+                          <button 
+                            onClick={() => {
+                              setRutaSeleccionada(ruta);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
+                          >
+                            Ver detalle
+                          </button>
+
+                          <button onClick={() => handleOpenModal(ruta.id)} className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'bg-red-900/40 text-red-400 hover:bg-red-900/60' : 'text-red-500 bg-red-50 hover:bg-red-100'}`}>Eliminar</button>
                         </td>
                       </tr>
                     ))
@@ -223,6 +239,13 @@ export default function Historial() {
         title="¿Eliminar esta ruta?"
         message={`Estás a punto de borrar la ruta ${rutaAEliminar}. Esta acción no se puede deshacer y se perderá del registro.`}
       />
+
+      <HistorialDetailModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        rutaId={rutaSeleccionada ? rutaSeleccionada.id : null}
+      />
+
     </div>
   );
 }

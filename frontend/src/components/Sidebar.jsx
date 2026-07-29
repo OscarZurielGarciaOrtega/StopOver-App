@@ -1,18 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 
 export default function Sidebar() {
+  // 🌙 ESTADO PARA EL MODO OSCURO (Sincronizado con localStorage y eventos en tiempo real)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('stopover_dark_mode') === 'true';
+  });
+
+  useEffect(() => {
+    // Función que actualiza el estado cuando detecta el cambio
+    const handleStorageChange = () => {
+      setIsDarkMode(localStorage.getItem('stopover_dark_mode') === 'true');
+    };
+
+    // Escucha el evento personalizado que mandamos desde Ajustes
+    window.addEventListener('storage_updated', handleStorageChange);
+    
+    // Limpieza del evento al desmontar
+    return () => {
+      window.removeEventListener('storage_updated', handleStorageChange);
+    };
+  }, []);
 
   const userRole = localStorage.getItem('userRole') || 'VIAJERO'; 
 
-  
   const activeClass = "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors bg-[#CBE3C7] text-[#2A4532] font-bold";
-  const inactiveClass = "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-400 font-medium hover:bg-gray-50 hover:text-[#4F7959]";
+  const inactiveClass = isDarkMode 
+    ? "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-400 font-medium hover:bg-gray-800 hover:text-emerald-400"
+    : "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-400 font-medium hover:bg-gray-50 hover:text-[#4F7959]";
 
   return (
-    <aside className="w-64 bg-[#FAF9F6] border-r border-gray-200 flex flex-col pt-6 min-h-screen">
+    <aside className={`w-64 border-r flex flex-col pt-6 min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-[#FAF9F6] border-gray-200'}`}>
       <nav className="flex flex-col gap-1 px-4">
-        
         
         {userRole === 'VIAJERO' && (
           <>
@@ -37,7 +56,6 @@ export default function Sidebar() {
             </NavLink>
           </>
         )}
-
     
         {userRole === 'PROPIETARIO' && (
           <NavLink to="/mi-negocio" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
@@ -59,7 +77,6 @@ export default function Sidebar() {
             </NavLink>
           </>
         )}
-
         
         <NavLink to="/ajustes" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>

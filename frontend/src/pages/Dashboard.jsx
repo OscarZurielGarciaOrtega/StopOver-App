@@ -20,6 +20,11 @@ function ChangeView({ center }) {
 }
 
 export default function Dashboard() {
+  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
+  const [isDarkMode] = useState(() => {
+    return localStorage.getItem('stopover_dark_mode') === 'true';
+  });
+
   // PERSISTENCIA REAL: Carga las rutas del navegador o usa las por defecto
   const [rutas, setRutas] = useState(() => {
     const guardadas = localStorage.getItem('stopover_rutas_reales');
@@ -214,9 +219,9 @@ export default function Dashboard() {
     : origenCoords;
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-[#FAF9F6]">
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
-      <header className="flex items-center justify-between px-8 py-4 bg-[#FAF9F6] border-b border-gray-200">
+      <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -225,19 +230,19 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <img src="https://i.pravatar.cc/150?img=47" alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300" />
-          <span className="text-sm font-semibold text-gray-700">Maria A</span>
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>Maria A</span>
         </div>
       </header>
 
       <div className="flex flex-1">
         
-        <aside className="w-64 bg-[#FAF9F6] border-r border-gray-200 flex flex-col pt-6">
+        <aside className={`w-64 border-r flex flex-col pt-6 transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-[#FAF9F6] border-gray-200'}`}>
           <nav className="flex flex-col gap-1 px-4">
             <NavLink
               to="/nueva-ruta"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
                 }`
               }
             >
@@ -251,7 +256,7 @@ export default function Dashboard() {
               to="/historial"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
                 }`
               }
             >
@@ -265,7 +270,7 @@ export default function Dashboard() {
               to="/favoritos"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
                 }`
               }
             >
@@ -279,7 +284,7 @@ export default function Dashboard() {
               to="/buscar"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
                 }`
               }
             >
@@ -293,7 +298,7 @@ export default function Dashboard() {
               to="/ajustes"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
+                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
                 }`
               }
             >
@@ -306,12 +311,12 @@ export default function Dashboard() {
           </nav>
         </aside>
 
-        <main className="flex-1 p-8 bg-white rounded-tl-3xl shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-t border-l border-gray-100 flex flex-col">
+        <main className={`flex-1 p-8 rounded-tl-3xl shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-t border-l flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
           
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Rutas recientes</h2>
-              <p className="text-sm text-gray-500 mt-1">Basado en tu ruta de Oaxaca a Puebla</p>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Rutas recientes</h2>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Basado en tu ruta de Oaxaca a Puebla</p>
             </div>
             <button 
               onClick={() => {
@@ -335,7 +340,7 @@ export default function Dashboard() {
                 setBusquedaTexto(e.target.value);
                 setPaginaActual(1);
               }}
-              className="border border-gray-300 rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-[#2A4532]"
+              className={`border rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
             />
             <select 
               value={filtroEstatus}
@@ -343,7 +348,7 @@ export default function Dashboard() {
                 setFiltroEstatus(e.target.value);
                 setPaginaActual(1);
               }}
-              className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-[#2A4532]"
+              className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
             >
               <option value="Todos">Estatus: Todos</option>
               <option value="En Tránsito">En Tránsito</option>
@@ -351,7 +356,7 @@ export default function Dashboard() {
               <option value="Retrasado">Retrasado</option>
               <option value="Cancelado">Cancelado</option>
             </select>
-            <select className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-[#2A4532]">
+            <select className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}>
               <option>📅 Esta semana</option>
             </select>
           </div>
@@ -359,7 +364,7 @@ export default function Dashboard() {
           <div className="w-full overflow-x-auto mb-4">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-y-2 border-gray-100 text-gray-400 text-sm">
+                <tr className={`border-y-2 text-sm ${isDarkMode ? 'border-gray-800 text-gray-400' : 'border-gray-100 text-gray-400'}`}>
                   <th className="py-3 px-2 font-medium">ID Ruta</th>
                   <th className="py-3 px-2 font-medium">Origen - Destino</th>
                   <th className="py-3 px-2 font-medium">Escala / Parada</th>
@@ -371,7 +376,7 @@ export default function Dashboard() {
               <tbody>
                 {rutasActuales.length > 0 ? (
                   rutasActuales.map((ruta, index) => (
-                    <tr key={index} className="border-b border-gray-100 text-sm text-gray-800 hover:bg-gray-50">
+                    <tr key={index} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-800 text-gray-200 hover:bg-gray-800/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
                       <td className="py-4 px-2">{ruta.id}</td>
                       <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
                       <td className="py-4 px-2">{ruta.escala}</td>
@@ -404,13 +409,13 @@ export default function Dashboard() {
             </table>
           </div>
 
-          <div className="flex justify-between items-center text-sm text-gray-600 mb-10 border-b border-gray-200 pb-8">
+          <div className={`flex justify-between items-center text-sm mb-10 border-b pb-8 ${isDarkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
             <span>Mostrando {rutasFiltradas.length > 0 ? indicePrimeraRuta + 1 : 0} a {Math.min(indiceUltimaRuta, rutasFiltradas.length)} de {rutasFiltradas.length} rutas</span>
             <div className="flex gap-2 font-semibold">
               <button 
                 onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
                 disabled={paginaActual === 1}
-                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === 1 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-200 cursor-pointer'}`}
+                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === 1 ? 'text-gray-600 cursor-not-allowed' : isDarkMode ? 'hover:bg-gray-800 cursor-pointer text-gray-300' : 'hover:bg-gray-200 cursor-pointer text-gray-600'}`}
               >
                 &lt;
               </button>
@@ -419,7 +424,7 @@ export default function Dashboard() {
                 <button 
                   key={index}
                   onClick={() => setPaginaActual(index + 1)}
-                  className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${paginaActual === index + 1 ? 'bg-[#4F7959] text-white' : 'hover:bg-gray-200 text-gray-600'}`}
+                  className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${paginaActual === index + 1 ? 'bg-[#4F7959] text-white' : isDarkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-200 text-gray-600'}`}
                 >
                   {index + 1}
                 </button>
@@ -428,7 +433,7 @@ export default function Dashboard() {
               <button 
                 onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
                 disabled={paginaActual === totalPaginas}
-                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === totalPaginas ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-200 cursor-pointer'}`}
+                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === totalPaginas ? 'text-gray-600 cursor-not-allowed' : isDarkMode ? 'hover:bg-gray-800 cursor-pointer text-gray-300' : 'hover:bg-gray-200 cursor-pointer text-gray-600'}`}
               >
                 &gt;
               </button>
@@ -437,38 +442,38 @@ export default function Dashboard() {
 
           <div className="flex flex-col md:flex-row gap-10 flex-1">
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-gray-500 mb-4">Categorías más buscadas</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-4">Categorías más buscadas</h3>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => abrirRecomendaciones('Cafeterías')}
-                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
                 >
                   <span className="flex items-center gap-2">☕ Cafeterías</span>
-                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
+                  <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
                 
                 <button 
                   onClick={() => abrirRecomendaciones('Miradores')}
-                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
                 >
                   <span className="flex items-center gap-2">📸 Miradores</span>
-                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
+                  <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
                 
                 <button 
                   onClick={() => abrirRecomendaciones('Pueblos mágicos')}
-                  className="w-full flex items-center justify-between bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border border-orange-100/50"
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
                 >
                   <span className="flex items-center gap-2">✨ Pueblos mágicos</span>
-                  <span className="text-xs bg-orange-200/60 px-2 py-1 rounded-lg">Sugerencias ›</span>
+                  <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
               </div>
             </div>
 
             <div className="flex-1 flex justify-center">
-              <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 w-full max-w-sm h-full flex flex-col justify-center">
-                <h3 className="text-center font-bold text-gray-800 mb-6">Tendencia ahora</h3>
-                <ul className="space-y-6 text-sm text-gray-600">
+              <div className={`rounded-3xl shadow-lg border p-8 w-full max-w-sm h-full flex flex-col justify-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+                <h3 className={`text-center font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Tendencia ahora</h3>
+                <ul className={`space-y-6 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   <li className="flex gap-2">
                     <span className="text-[#2A4532] mt-1">•</span>
                     {totalViajerosHoy} viajeros exploraron Oaxaca hoy

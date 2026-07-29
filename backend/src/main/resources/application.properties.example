@@ -8,3 +8,8 @@ jwt.secret=tu_clave_secreta_jwt
 
 jwt.secret=tu_clave_secreta_jwt
 jwt.expiration=86400000
+
+twilio.account.sid=tu_account_sid
+twilio.auth.token=tu_auth_token
+twilio.phone.number=tu_numero_sms
+twilio.whatsapp.number=whatsapp:tu_numero_whatsapp

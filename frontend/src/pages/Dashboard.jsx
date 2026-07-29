@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -24,6 +24,24 @@ export default function Dashboard() {
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
+
+  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE
+  const [avatar, setAvatar] = useState(() => {
+    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
+  });
+  const [nombre, setNombre] = useState(() => {
+    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+  });
+
+  // 🔔 ESCUCHAR EN TIEMPO REAL SI EL USUARIO CAMBIA SU FOTO O NOMBRE EN AJUSTES
+  useEffect(() => {
+    const handleProfileChange = () => {
+      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
+      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+    };
+    window.addEventListener('user_profile_updated', handleProfileChange);
+    return () => window.removeEventListener('user_profile_updated', handleProfileChange);
+  }, []);
 
   // PERSISTENCIA REAL: Carga las rutas del navegador o usa las por defecto
   const [rutas, setRutas] = useState(() => {
@@ -229,8 +247,9 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <img src="https://i.pravatar.cc/150?img=47" alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300" />
-          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>Maria A</span>
+          {/* AQUÍ ESTÁ EL CAMBIO DE LA FOTO Y NOMBRE DE PERFIL */}
+          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
 

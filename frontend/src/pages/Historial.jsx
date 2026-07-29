@@ -8,6 +8,24 @@ export default function Historial() {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
+  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE
+  const [avatar, setAvatar] = useState(() => {
+    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
+  });
+  const [nombre, setNombre] = useState(() => {
+    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+  });
+
+  // 🔔 ESCUCHAR EN TIEMPO REAL SI EL USUARIO CAMBIA SU FOTO O NOMBRE EN AJUSTES
+  useEffect(() => {
+    const handleProfileChange = () => {
+      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
+      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+    };
+    window.addEventListener('user_profile_updated', handleProfileChange);
+    return () => window.removeEventListener('user_profile_updated', handleProfileChange);
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rutaAEliminar, setRutaAEliminar] = useState(null);
 
@@ -115,8 +133,9 @@ export default function Historial() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <img src="https://i.pravatar.cc/150?img=47" alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover" />
-          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>Maria A</span>
+          {/* AQUÍ ESTÁ EL CAMBIO DE LA FOTO Y NOMBRE DE PERFIL */}
+          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
 

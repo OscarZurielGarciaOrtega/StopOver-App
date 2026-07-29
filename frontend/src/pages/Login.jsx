@@ -74,14 +74,19 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* AQUÍ ESTÁ LA MAGIA: Agregamos noValidate para quitar el tooltip gris del navegador */}
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            
             <div>
               <label className="block text-sm font-extrabold text-gray-900 mb-2">Correo electrónico</label>
               <div className="relative">
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors({ ...errors, email: '' }); // Limpia el error al escribir
+                  }}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
                   placeholder="admin@stopover.com"
                 />
@@ -100,7 +105,10 @@ export default function Login() {
                 <input
                   type={showPassword ? 'text' : 'password'} 
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors({ ...errors, password: '' }); // Limpia el error al escribir
+                  }}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
                   placeholder="••••••••"
                 />

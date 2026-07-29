@@ -54,10 +54,8 @@ public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
 
     configuration.setAllowedOrigins(List.of(
-        "http://18.188.66.230"
-        // Si después usan un dominio, agréguenlo aquí.
-        // Ejemplo: "https://stopover.com"
-    ));
+    "https://stopover-app.lat"
+));
 
     configuration.setAllowedMethods(List.of(
         "GET", "POST", "PUT", "DELETE", "OPTIONS"

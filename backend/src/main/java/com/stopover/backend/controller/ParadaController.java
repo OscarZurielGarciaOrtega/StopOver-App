@@ -50,4 +50,25 @@ public class ParadaController {
 
         return ResponseEntity.ok(respuesta);
     }
+
+
+
+    @GetMapping("/recomendaciones")
+public ResponseEntity<Page<ParadaResponse>> recomendar(
+        Pageable pageable,
+        @RequestParam(required = false) String tipo,
+        @RequestParam(required = false) String destino
+) {
+    Page<ParadaResponse> respuesta = paradaRepository.recomendar(tipo, destino, pageable)
+            .map(parada -> new ParadaResponse(
+                    parada.getId(),
+                    parada.getNombre(),
+                    parada.getLatitud(),
+                    parada.getLongitud(),
+                    parada.getTipo()
+            ));
+
+    return ResponseEntity.ok(respuesta);
+}
+
 }

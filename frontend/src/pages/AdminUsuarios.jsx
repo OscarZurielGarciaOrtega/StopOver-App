@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import Modal from '../components/Modal';
 
 export default function AdminUsuarios() {
   // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
@@ -9,7 +10,7 @@ export default function AdminUsuarios() {
 
   // PERSISTENCIA REAL: Carga los usuarios del navegador o usa la lista por defecto
   const [usuarios, setUsuarios] = useState(() => {
-    const guardados = localStorage.getItem('stopover_admin_usuarios');
+    const guardadas = localStorage.getItem('stopover_admin_usuarios');
     if (guardadas) {
       try {
         return JSON.parse(guardadas);
@@ -23,6 +24,16 @@ export default function AdminUsuarios() {
       { id: 3, nombre: 'Carlos Mendoza', correo: 'carlos.m@gmail.com', rol: 'VIAJERO', estatus: 'Bloqueado' },
     ];
   });
+
+  // ESTADOS PARA LOS MODALES
+  const [isNuevoModalOpen, setIsNuevoModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState(null);
+
+  // Campos para el formulario de nuevo usuario
+  const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoCorreo, setNuevoCorreo] = useState('');
+  const [nuevoRol, setNuevoRol] = useState('VIAJERO');
 
   // Guardar en localStorage automáticamente al modificar la lista
   useEffect(() => {
@@ -40,9 +51,40 @@ export default function AdminUsuarios() {
     }));
   };
 
-  // Función para eliminar usuario
-  const handleDelete = (id) => {
-    setUsuarios(usuarios.filter(u => u.id !== id));
+  // Abrir modal de confirmación de eliminación
+  const handleOpenDeleteModal = (id) => {
+    setUsuarioAEliminar(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirmar eliminación real
+  const handleConfirmDelete = () => {
+    setUsuarios(usuarios.filter(u => u.id !== usuarioAEliminar));
+    setUsuarioAEliminar(null);
+    setIsDeleteModalOpen(false);
+  };
+
+  // Agregar nuevo usuario desde el modal
+  const handleCrearUsuario = (e) => {
+    e.preventDefault();
+    if (!nuevoNombre || !nuevoCorreo) {
+      alert('Por favor completa todos los campos.');
+      return;
+    }
+
+    const nuevoObj = {
+      id: Date.now(),
+      nombre: nuevoNombre,
+      correo: nuevoCorreo,
+      rol: nuevoRol,
+      estatus: 'Activo'
+    };
+
+    setUsuarios([nuevoObj, ...usuarios]);
+    setNuevoNombre('');
+    setNuevoCorreo('');
+    setNuevoRol('VIAJERO');
+    setIsNuevoModalOpen(false);
   };
 
   return (
@@ -62,7 +104,10 @@ export default function AdminUsuarios() {
               <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Gestión de Usuarios</h2>
               <p className="text-sm text-gray-400 mt-1">Control total de cuentas registradas en el sistema</p>
             </div>
-            <button className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1E3324] transition-colors shadow-md cursor-pointer">
+            <button 
+              onClick={() => setIsNuevoModalOpen(true)}
+              className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1E3324] transition-colors shadow-md cursor-pointer"
+            >
               + Nuevo Usuario
             </button>
           </div>
@@ -91,7 +136,13 @@ export default function AdminUsuarios() {
                       <td className="py-4 px-2 font-bold">{usuario.nombre}</td>
                       <td className={`py-4 px-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{usuario.correo}</td>
                       <td className="py-4 px-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? 'bg-emerald-900/60 text-emerald-300' : 'bg-[#CBE3C7] text-[#2A4532]'}`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          usuario.rol === 'ADMIN' 
+                            ? (isDarkMode ? 'bg-emerald-900/60 text-emerald-300' : 'bg-[#CBE3C7] text-[#2A4532]')
+                            : usuario.rol === 'PROPIETARIO'
+                            ? (isDarkMode ? 'bg-orange-950/60 text-orange-300' : 'bg-orange-100 text-orange-700')
+                            : (isDarkMode ? 'bg-blue-950/60 text-blue-300' : 'bg-blue-100 text-blue-700')
+                        }`}>
                           {usuario.rol}
                         </span>
                       </td>
@@ -116,7 +167,7 @@ export default function AdminUsuarios() {
                           {usuario.estatus === 'Activo' ? 'Bloquear' : 'Desbloquear'}
                         </button>
                         <button 
-                          onClick={() => handleDelete(usuario.id)}
+                          onClick={() => handleOpenDeleteModal(usuario.id)}
                           className="text-red-500 hover:text-red-700 font-semibold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                         >
                           Eliminar
@@ -130,6 +181,81 @@ export default function AdminUsuarios() {
           </div>
         </main>
       </div>
+
+      {/* 🟢 MODAL PARA CREAR NUEVO USUARIO */}
+      {isNuevoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+          <div className={`w-full max-w-md rounded-3xl shadow-2xl p-6 border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
+            <div className="flex justify-between items-center mb-4 border-b pb-3">
+              <h3 className="text-lg font-bold">Registrar Nuevo Usuario</h3>
+              <button onClick={() => setIsNuevoModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl cursor-pointer">✕</button>
+            </div>
+            
+            <form onSubmit={handleCrearUsuario} className="space-y-4">
+              <div>
+                <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Nombre completo</label>
+                <input 
+                  type="text" 
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="Ej. Juan Pérez"
+                  className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Correo electrónico</label>
+                <input 
+                  type="email" 
+                  value={nuevoCorreo}
+                  onChange={(e) => setNuevoCorreo(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Rol del sistema</label>
+                <select 
+                  value={nuevoRol}
+                  onChange={(e) => setNuevoRol(e.target.value)}
+                  className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] cursor-pointer ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                >
+                  <option value="VIAJERO">VIAJERO</option>
+                  <option value="PROPIETARIO">PROPIETARIO</option>
+                  <option value="ADMIN">ADMIN</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setIsNuevoModalOpen(false)}
+                  className={`px-5 py-2 rounded-xl font-semibold text-sm cursor-pointer ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer"
+                >
+                  Guardar Usuario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 MODAL DE CONFIRMACIÓN PARA ELIMINAR */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="¿Estás seguro de eliminar este usuario?"
+        message="Esta acción borrará la cuenta de forma permanente del sistema y no se podrá deshacer."
+      />
+
     </div>
   );
 }

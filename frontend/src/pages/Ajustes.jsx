@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 
 export default function Ajustes() {
@@ -12,7 +12,7 @@ export default function Ajustes() {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 3. Cargar el nombre y correo desde localStorage si existen
+  // 3. Cargar el nombre y correo
   const [nombre, setNombre] = useState(() => {
     return localStorage.getItem('stopover_user_nombre') || 'Maria A';
   });
@@ -24,18 +24,43 @@ export default function Ajustes() {
   const [passwordActual, setPasswordActual] = useState('');
   const [passwordNueva, setPasswordNueva] = useState('');
 
-  // Función para manejar la subida de la imagen y guardarla en localStorage con evento en tiempo real
+  // 🔔 ESTADOS PARA NUESTRO MODAL DE ALERTAS PERSONALIZADO
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertIsError, setAlertIsError] = useState(false);
+
+  const mostrarAlerta = (mensaje, esError = false) => {
+    setAlertMessage(mensaje);
+    setAlertIsError(esError);
+    setAlertModalOpen(true);
+  };
+
+  // Escuchar cambios de perfil desde otras pestañas (por si acaso)
+  useEffect(() => {
+    const handleProfileChange = () => {
+      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
+      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+    };
+    window.addEventListener('user_profile_updated', handleProfileChange);
+    return () => window.removeEventListener('user_profile_updated', handleProfileChange);
+  }, []);
+
+  // 🛠️ SOLUCIÓN A LA IMAGEN ROTA: Leer como Base64 para que sea permanente
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setAvatar(imageUrl);
-      localStorage.setItem('stopover_user_avatar', imageUrl);
-      window.dispatchEvent(new Event('user_profile_updated'));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setAvatar(base64String);
+        localStorage.setItem('stopover_user_avatar', base64String);
+        window.dispatchEvent(new Event('user_profile_updated'));
+      };
+      reader.readAsDataURL(file); // Convierte la imagen a texto permanente
     }
   };
 
-  // Función para alternar y guardar el modo oscuro globalmente
+  // Función para alternar modo oscuro
   const toggleDarkMode = () => {
     const nuevoEstado = !isDarkMode;
     setIsDarkMode(nuevoEstado);
@@ -43,23 +68,23 @@ export default function Ajustes() {
     window.dispatchEvent(new Event('storage_updated'));
   };
 
-  // Función para guardar los cambios de perfil en localStorage y avisar a las demás vistas
+  // Guardar perfil usando el nuevo Modal
   const handleGuardarPerfil = (e) => {
     e.preventDefault();
     localStorage.setItem('stopover_user_nombre', nombre);
     localStorage.setItem('stopover_user_correo', correo);
     window.dispatchEvent(new Event('user_profile_updated'));
-    alert('¡Perfil y cambios guardados con éxito en el sistema!');
+    mostrarAlerta('¡Perfil y configuración guardados con éxito en el sistema!');
   };
 
-  // Función para actualizar contraseña
+  // Actualizar contraseña usando el nuevo Modal
   const handleActualizarPassword = (e) => {
     e.preventDefault();
     if (!passwordNueva) {
-      alert('Por favor escribe tu nueva contraseña.');
+      mostrarAlerta('Por favor escribe tu nueva contraseña antes de actualizar.', true);
       return;
     }
-    alert('¡Contraseña actualizada correctamente!');
+    mostrarAlerta('¡Tu contraseña ha sido actualizada correctamente!');
     setPasswordActual('');
     setPasswordNueva('');
   };
@@ -76,7 +101,7 @@ export default function Ajustes() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover" />
+          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
           <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
@@ -99,7 +124,7 @@ export default function Ajustes() {
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Perfil</h3>
               
               <div className="flex items-center gap-6 mt-6 mb-6">
-                <img src={avatar} alt="Perfil" className="w-16 h-16 rounded-full border border-gray-200 shadow-sm object-cover" />
+                <img src={avatar} alt="Perfil" className="w-16 h-16 rounded-full border border-gray-200 shadow-sm object-cover bg-white" />
                 
                 <input 
                   type="file" 
@@ -159,14 +184,6 @@ export default function Ajustes() {
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Preferencias</h3>
               
               <div className="flex flex-col gap-5 mt-6">
-                
-                <div className="flex items-center gap-4 cursor-pointer">
-                  <div className="w-12 h-6 bg-[#567E64] rounded-full relative shadow-inner">
-                    <div className="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm"></div>
-                  </div>
-                  <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notificaciones por correo</span>
-                </div>
-
                 {/* SWITCH INTERACTIVO PARA EL MODO OSCURO */}
                 <div 
                   className="flex items-center gap-4 cursor-pointer select-none"
@@ -176,13 +193,6 @@ export default function Ajustes() {
                     <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-md border border-gray-100 transition-all duration-300 ${isDarkMode ? 'right-0.5' : 'left-0.5'}`}></div>
                   </div>
                   <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Modo oscuro</span>
-                </div>
-
-                <div className="mt-2 w-32">
-                  <select className={`w-full border rounded-lg py-2 px-3 shadow-sm focus:outline-none focus:border-[#4F7959] appearance-none cursor-pointer ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
-                    <option>Español</option>
-                    <option>Inglés</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -243,6 +253,30 @@ export default function Ajustes() {
 
         </main>
       </div>
+
+      {/* 🟢 MODAL DE ALERTAS PERSONALIZADO */}
+      {alertModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+          <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
+            <div className="flex justify-center mb-4">
+              <span className="text-5xl">{alertIsError ? '⚠️' : '✅'}</span>
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              {alertIsError ? 'Atención' : '¡Éxito!'}
+            </h3>
+            <p className={`text-sm mb-8 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              {alertMessage}
+            </p>
+            <button
+              onClick={() => setAlertModalOpen(false)}
+              className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer w-full"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

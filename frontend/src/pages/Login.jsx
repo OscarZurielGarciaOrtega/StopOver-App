@@ -36,7 +36,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Petición real al backend de Emma en el puerto 9000
+      // Petición real al backend de Emma en el puerto 9000 / dominio seguro
       const response = await api.post('/auth/login', { email, password });
       
       // Guardamos el token real y el rol que regresa el servidor
@@ -47,7 +47,11 @@ export default function Login() {
       navigate('/nueva-ruta');
     } catch (err) {
       console.error(err);
-      setServerError('Credenciales incorrectas o error al conectar con el servidor');
+      
+      // AQUÍ ESTÁ EL CAMBIO: Leemos el error estandarizado de Emma
+      const mensajeError = err.response?.data?.mensajes?.[0] || 'Credenciales incorrectas o error al conectar con el servidor';
+      setServerError(mensajeError);
+      
     } finally {
       setLoading(false);
     }

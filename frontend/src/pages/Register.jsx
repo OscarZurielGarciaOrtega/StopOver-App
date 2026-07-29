@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../api/axios'; // <-- Importamos nuestra API configurada
 import globe from '../assets/globe.png';
 
 export default function Register() {
@@ -8,6 +9,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
+  const [serverError, setServerError] = useState(''); // <-- Nuevo estado para los errores de Emma
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -59,11 +61,28 @@ export default function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Evita que la página recargue
+  // AQUÍ ESTÁ LA MAGIA: Convertimos la función a asíncrona
+  const handleSubmit = async (e) => {
+    e.preventDefault(); 
+    setServerError(''); // Limpiamos errores previos del servidor
+
     if (validateForm()) {
-      // Si todo está perfecto, mostramos el modal bonito
-      setShowModal(true);
+      try {
+        // Hacemos el POST al endpoint de Emma mapeando los campos como ella los pide
+        await api.post('/auth/registro', {
+          nombre: formData.name, 
+          email: formData.email,
+          telefono: formData.telefono,
+          password: formData.password
+        });
+        
+        // Si todo sale 100% bien en el backend, mostramos tu modal nativo de Tailwind
+        setShowModal(true);
+      } catch (error) {
+        // Leemos el error estandarizado de Emma (ej. "El correo ya existe")
+        const mensajeError = error.response?.data?.mensajes?.[0] || 'Error al conectar con el servidor';
+        setServerError(mensajeError);
+      }
     }
   };
 
@@ -82,7 +101,13 @@ export default function Register() {
           <h2 className="text-2xl font-bold text-gray-800 mb-1">¡Únete al viaje!</h2>
           <p className="text-gray-500 font-medium mb-6">Crea tu cuenta y empieza a planear</p>
 
-          {/* EL SECRETO: noValidate apaga los tooltips feos del navegador */}
+          {/* AQUÍ IMPRIMIMOS EL ERROR DEL SERVIDOR SI ES QUE HAY ALGUNO */}
+          {serverError && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded-xl font-medium">
+              {serverError}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             
             <div>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function DetailModal({ isOpen, onClose, rutaId }) {
+export default function DetailModal({ isOpen, onClose, rutaId, onCancelar }) {
   if (!isOpen) return null;
 
   // 🛑 MOCK DATA: Esto simula el JSON que Emma te regresará en el endpoint GET /api/rutas/{id}
@@ -89,10 +89,12 @@ export default function DetailModal({ isOpen, onClose, rutaId }) {
           </div>
         </div>
 
-        {/* Footer del Modal */}
+        
         <div className="p-6 bg-[#FAFAF8] border-t border-gray-100 flex gap-3">
+          
           <button 
-            className="w-1/3 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition-colors text-sm"
+            onClick={onCancelar}
+            className="text-[#EF4444] font-bold text-sm px-4 py-2 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
           >
             Cancelar Viaje
           </button>

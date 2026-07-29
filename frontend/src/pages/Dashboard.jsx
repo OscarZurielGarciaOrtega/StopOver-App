@@ -59,31 +59,87 @@ export default function Dashboard() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [isRecModalOpen, setIsRecModalOpen] = useState(false);
 
+  // 🔍 ESTADOS PARA LOS FILTROS DE LA TABLA
+  const [busquedaTexto, setBusquedaTexto] = useState('');
+  const [filtroEstatus, setFiltroEstatus] = useState('Todos');
+
+  // LÓGICA DE PAGINACIÓN Y FILTRADO
+  const [paginaActual, setPaginaActual] = useState(1);
+  const rutasPorPagina = 4;
+  
+  // 🧮 FILTRAR RUTAS SEGÚN BÚSQUEDA Y ESTATUS
+  const rutasFiltradas = rutas.filter(ruta => {
+    const textoMatch = 
+      ruta.id.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
+      ruta.origen.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
+      ruta.destino.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
+      ruta.escala.toLowerCase().includes(busquedaTexto.toLowerCase());
+    
+    const estatusMatch = filtroEstatus === 'Todos' || ruta.estatus === filtroEstatus;
+
+    return textoMatch && estatusMatch;
+  });
+
+  // Calcular qué rutas mostrar en la página actual usando el arreglo filtrado
+  const indiceUltimaRuta = paginaActual * rutasPorPagina;
+  const indicePrimeraRuta = indiceUltimaRuta - rutasPorPagina;
+  const rutasActuales = rutasFiltradas.slice(indicePrimeraRuta, indiceUltimaRuta);
+  const totalPaginas = Math.ceil(rutasFiltradas.length / rutasPorPagina) || 1;
+
+  // 📊 LÓGICA DE TENDENCIAS INTELIGENTES
+  const totalViajerosHoy = 240 + (rutas.length * 13);
+
+  const conteoEscalas = {};
+  rutas.forEach(r => {
+    if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo')) {
+      r.escala.split(',').forEach(parada => {
+        const pLimpia = parada.trim();
+        conteoEscalas[pLimpia] = (conteoEscalas[pLimpia] || 0) + 1;
+      });
+    }
+  });
+
+  let paradaMasGuardada = "Mural del Centro";
+  let maxRepeticiones = 0;
+  Object.keys(conteoEscalas).forEach(parada => {
+    if (conteoEscalas[parada] > maxRepeticiones) {
+      maxRepeticiones = conteoEscalas[parada];
+      paradaMasGuardada = parada;
+    }
+  });
+
   const abrirRecomendaciones = (categoria) => {
     setCategoriaSeleccionada(categoria);
     setIsRecModalOpen(true);
   };
 
-  // 👇 LA FUNCIÓN AHORA SÍ ESTÁ EN EL LUGAR CORRECTO 👇
   const agregarParadaARuta = (paradaSeleccionada) => {
-    const rutasActualizadas = [...rutas]; // Clonamos tu arreglo de rutas
+    const rutasActualizadas = [...rutas];
     
     if (rutasActualizadas.length > 0) {
-      const rutaActiva = rutasActualizadas[0]; // Tomamos la ruta más reciente (la de hasta arriba)
+      const rutaActiva = rutasActualizadas[0];
       
-      // Lógica: Si la escala dice "km por carretera" o "Directo", la sobreescribimos. Si ya tiene una parada, se la sumamos con una coma.
       if (rutaActiva.escala.includes('km') || rutaActiva.escala.includes('Directo')) {
         rutaActiva.escala = paradaSeleccionada.nombre;
       } else {
         rutaActiva.escala = rutaActiva.escala + ', ' + paradaSeleccionada.nombre;
       }
       
-      // Actualizamos el estado y el LocalStorage
       setRutas(rutasActualizadas);
       localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
     }
     
-    setIsRecModalOpen(false); // Cerramos el modal
+    setIsRecModalOpen(false);
+  };
+
+  const cancelarRuta = (idRuta) => {
+    const rutasActualizadas = rutas.map(ruta => 
+      ruta.id === idRuta ? { ...ruta, estatus: 'Cancelado' } : ruta
+    );
+    
+    setRutas(rutasActualizadas);
+    localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
+    setIsDetailModalOpen(false);
   };
 
   const buscarLugarAPI = async (texto, setSugerenciasState) => {
@@ -185,6 +241,9 @@ export default function Dashboard() {
                 }`
               }
             >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
               Nueva ruta
             </NavLink>
 
@@ -196,6 +255,9 @@ export default function Dashboard() {
                 }`
               }
             >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Historial
             </NavLink>
 
@@ -207,6 +269,9 @@ export default function Dashboard() {
                 }`
               }
             >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
               Favoritos
             </NavLink>
 
@@ -218,6 +283,9 @@ export default function Dashboard() {
                 }`
               }
             >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               Buscar
             </NavLink>
 
@@ -229,6 +297,10 @@ export default function Dashboard() {
                 }`
               }
             >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               Ajustes
             </NavLink>
           </nav>
@@ -258,10 +330,26 @@ export default function Dashboard() {
             <input 
               type="text" 
               placeholder="Buscar por origen, destino o parada" 
+              value={busquedaTexto}
+              onChange={(e) => {
+                setBusquedaTexto(e.target.value);
+                setPaginaActual(1);
+              }}
               className="border border-gray-300 rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-[#2A4532]"
             />
-            <select className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-[#2A4532]">
-              <option>Estatus: Todos</option>
+            <select 
+              value={filtroEstatus}
+              onChange={(e) => {
+                setFiltroEstatus(e.target.value);
+                setPaginaActual(1);
+              }}
+              className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-[#2A4532]"
+            >
+              <option value="Todos">Estatus: Todos</option>
+              <option value="En Tránsito">En Tránsito</option>
+              <option value="Completado">Completado</option>
+              <option value="Retrasado">Retrasado</option>
+              <option value="Cancelado">Cancelado</option>
             </select>
             <select className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-[#2A4532]">
               <option>📅 Esta semana</option>
@@ -281,44 +369,69 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {rutas.map((ruta, index) => (
-                  <tr key={index} className="border-b border-gray-100 text-sm text-gray-800 hover:bg-gray-50">
-                    <td className="py-4 px-2">{ruta.id}</td>
-                    <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
-                    <td className="py-4 px-2">{ruta.escala}</td>
-                    <td className="py-4 px-2">{ruta.duracion}</td>
-                    <td className="py-4 px-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>
-                        {ruta.estatus}
-                      </span>
-                    </td>
-                    <td className="py-4 px-2">
-                      <button 
-                        onClick={() => {
-                          setRutaSeleccionada(ruta);
-                          setIsDetailModalOpen(true);
-                        }}
-                        className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
-                      >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                        Ver detalle
-                      </button>
-                    </td>
+                {rutasActuales.length > 0 ? (
+                  rutasActuales.map((ruta, index) => (
+                    <tr key={index} className="border-b border-gray-100 text-sm text-gray-800 hover:bg-gray-50">
+                      <td className="py-4 px-2">{ruta.id}</td>
+                      <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
+                      <td className="py-4 px-2">{ruta.escala}</td>
+                      <td className="py-4 px-2">{ruta.duracion}</td>
+                      <td className="py-4 px-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>
+                          {ruta.estatus}
+                        </span>
+                      </td>
+                      <td className="py-4 px-2">
+                        <button 
+                          onClick={() => {
+                            setRutaSeleccionada(ruta);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                          Ver detalle
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No se encontraron rutas que coincidan con tu búsqueda.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="flex justify-between items-center text-sm text-gray-600 mb-10 border-b border-gray-200 pb-8">
-            <span>Mostrando 1 a 4 de 12 rutas</span>
+            <span>Mostrando {rutasFiltradas.length > 0 ? indicePrimeraRuta + 1 : 0} a {Math.min(indiceUltimaRuta, rutasFiltradas.length)} de {rutasFiltradas.length} rutas</span>
             <div className="flex gap-2 font-semibold">
-              <button className="hover:text-gray-900">&lt;</button>
-              <button className="bg-[#4F7959] text-white px-2 py-0.5 rounded">1</button>
-              <button className="hover:text-gray-900 px-1">2</button>
-              <span className="text-gray-400">|</span>
-              <button className="hover:text-gray-900 px-1">3</button>
-              <button className="hover:text-gray-900">&gt;</button>
+              <button 
+                onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                disabled={paginaActual === 1}
+                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === 1 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-200 cursor-pointer'}`}
+              >
+                &lt;
+              </button>
+              
+              {[...Array(totalPaginas)].map((_, index) => (
+                <button 
+                  key={index}
+                  onClick={() => setPaginaActual(index + 1)}
+                  className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${paginaActual === index + 1 ? 'bg-[#4F7959] text-white' : 'hover:bg-gray-200 text-gray-600'}`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+
+              <button 
+                onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
+                disabled={paginaActual === totalPaginas}
+                className={`px-2 py-0.5 rounded transition-colors ${paginaActual === totalPaginas ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-200 cursor-pointer'}`}
+              >
+                &gt;
+              </button>
             </div>
           </div>
 
@@ -353,16 +466,16 @@ export default function Dashboard() {
             </div>
 
             <div className="flex-1 flex justify-center">
-              <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 w-full max-w-sm h-fit">
+              <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 w-full max-w-sm h-full flex flex-col justify-center">
                 <h3 className="text-center font-bold text-gray-800 mb-6">Tendencia ahora</h3>
                 <ul className="space-y-6 text-sm text-gray-600">
                   <li className="flex gap-2">
                     <span className="text-[#2A4532] mt-1">•</span>
-                    247 viajeros exploraron Oaxaca hoy
+                    {totalViajerosHoy} viajeros exploraron Oaxaca hoy
                   </li>
                   <li className="flex gap-2">
                     <span className="text-[#2A4532] mt-1">•</span>
-                    "Mural del Centro" es la parada más guardada esta semana
+                    "{paradaMasGuardada}" es la parada más guardada esta semana
                   </li>
                 </ul>
               </div>
@@ -376,7 +489,6 @@ export default function Dashboard() {
         </main>
       </div>
 
-      
       {isMapModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-visible">
@@ -522,7 +634,6 @@ export default function Dashboard() {
                       estatus: 'En Tránsito'
                     };
                     
-                    // PERSISTENCIA REAL EN LOCALSTORAGE
                     const rutasActualizadas = [nuevaRutaObj, ...rutas];
                     setRutas(rutasActualizadas);
                     localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
@@ -541,14 +652,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MODAL VER DETALLE EXTERNO */}
       <DetailModal 
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
         rutaId={rutaSeleccionada ? rutaSeleccionada.id : null}
+        onCancelar={() => rutaSeleccionada && cancelarRuta(rutaSeleccionada.id)}
       />
 
-      {/* MODAL DE RECOMENDACIONES DE CATEGORÍAS */}
       <RecommendationsModal 
         isOpen={isRecModalOpen}
         onClose={() => setIsRecModalOpen(false)}

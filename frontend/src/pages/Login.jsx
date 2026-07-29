@@ -65,8 +65,8 @@ export default function Login() {
 
         {/* Lado derecho - Formulario */}
         <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#FAFAF8]">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Bienvenido de vuelta!</h2>
-          <p className="text-gray-500 font-medium mb-8">Ingresa tus datos para continuar tu viaje</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2"></h2>
+          <p className="text-gray-500 font-medium mb-8"></p>
 
           {serverError && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded-xl font-medium">
@@ -131,8 +131,8 @@ export default function Login() {
             </button>
 
             <div className="text-center mt-4">
-              <span className="text-sm text-gray-400 font-medium">¿No tienes cuenta? </span>
-              <Link to="/registro" className="text-sm text-[#4F7959] font-bold hover:underline">Regístrate</Link>
+              <span className="text-sm text-gray-400 font-medium"> </span>
+              <Link to="/registro" className="text-sm text-[#4F7959] font-bold hover:underline"></Link>
             </div>
           </form>
         </div>

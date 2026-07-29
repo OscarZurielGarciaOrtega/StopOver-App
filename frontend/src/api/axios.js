@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Cambiamos el localhost por la IP pública y el puerto nuevo del backend
-  baseURL: 'http://18.188.66.230:9000/api',
+  // ¡Adiós IP y puerto! Hola dominio seguro
+  baseURL: 'https://stopover-app.lat/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -10,7 +10,6 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    
     const token = localStorage.getItem('token');
     
     if (token) {

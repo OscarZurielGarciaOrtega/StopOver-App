@@ -496,7 +496,7 @@ export default function Dashboard() {
 
       {isMapModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-visible">
+          <div className={`w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-visible ${isDarkMode ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-800'}`}>
             
             <div className="bg-[#2A4532] text-white px-6 py-4 rounded-t-3xl flex justify-between items-center">
               <h3 className="text-lg font-bold">Planea tu ruta</h3>
@@ -508,7 +508,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative overflow-visible">
                 
                 <div className="relative">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Origen del viaje</label>
+                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Origen del viaje</label>
                   <input 
                     type="text" 
                     value={origenTexto}
@@ -518,11 +518,11 @@ export default function Dashboard() {
                       buscarLugarAPI(val, setSugerenciasOrigen);
                     }}
                     placeholder="Escribe origen..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#2A4532]"
+                    className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
                   />
                   
                   {sugerenciasOrigen.length > 0 && (
-                    <ul className="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                    <ul className={`absolute z-50 left-0 right-0 border rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
                       {sugerenciasOrigen.map((item, idx) => (
                         <li 
                           key={idx}
@@ -533,7 +533,7 @@ export default function Dashboard() {
                             setSugerenciasOrigen([]);
                             if (destinoCoords) calcularRutaCarretera(nuevasCoords, destinoCoords);
                           }}
-                          className="px-4 py-2.5 text-xs text-gray-700 hover:bg-[#CBE3C7]/60 cursor-pointer font-medium border-b border-gray-50"
+                          className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}
                         >
                           📍 {item.label}
                         </li>
@@ -543,7 +543,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="relative">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Destino</label>
+                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Destino</label>
                   <input 
                     type="text" 
                     value={destinoTexto}
@@ -553,11 +553,11 @@ export default function Dashboard() {
                       buscarLugarAPI(val, setSugerenciasDestino);
                     }}
                     placeholder="Escribe destino..." 
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#2A4532]"
+                    className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
                   />
 
                   {sugerenciasDestino.length > 0 && (
-                    <ul className="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                    <ul className={`absolute z-50 left-0 right-0 border rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
                       {sugerenciasDestino.map((item, idx) => (
                         <li 
                           key={idx}
@@ -568,7 +568,7 @@ export default function Dashboard() {
                             setSugerenciasDestino([]);
                             calcularRutaCarretera(origenCoords, nuevasCoords);
                           }}
-                          className="px-4 py-2.5 text-xs text-gray-700 hover:bg-[#CBE3C7]/60 cursor-pointer font-medium border-b border-gray-50"
+                          className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}
                         >
                           🎯 {item.label}
                         </li>
@@ -580,9 +580,9 @@ export default function Dashboard() {
               </div>
 
               {distanciaKm && duracionTexto && (
-                <div className="bg-[#CBE3C7]/40 border border-[#2A4532]/20 rounded-2xl p-3 flex justify-around text-center text-xs sm:text-sm font-bold text-[#2A4532]">
-                  <div>🚗 Distancia: <span className="text-black font-normal">{distanciaKm} km</span></div>
-                  <div>⏱️ Tiempo estimado: <span className="text-black font-normal">{duracionTexto}</span></div>
+                <div className={`border rounded-2xl p-3 flex justify-around text-center text-xs sm:text-sm font-bold ${isDarkMode ? 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300' : 'bg-[#CBE3C7]/40 border-[#2A4532]/20 text-[#2A4532]'}`}>
+                  <div>🚗 Distancia: <span className={`font-normal ${isDarkMode ? 'text-white' : 'text-black'}`}>{distanciaKm} km</span></div>
+                  <div>⏱️ Tiempo estimado: <span className={`font-normal ${isDarkMode ? 'text-white' : 'text-black'}`}>{duracionTexto}</span></div>
                 </div>
               )}
 
@@ -620,7 +620,7 @@ export default function Dashboard() {
               <div className="flex justify-end gap-3 mt-2">
                 <button 
                   onClick={() => setIsMapModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
                   Cancelar
                 </button>

@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function RecommendationsModal({ isOpen, onClose, categoria, destinoRuta, onAgregar }) {
+  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
+  const [isDarkMode] = useState(() => {
+    return localStorage.getItem('stopover_dark_mode') === 'true';
+  });
+
   if (!isOpen) return null;
 
   // 🧠 BANCO DE PARADAS INTELIGENTE (Etiquetado por zona/destino clave)
@@ -26,25 +31,22 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
   const listaCategoria = bancoDeParadas[categoria] || [];
   
   const recomendaciones = listaCategoria.filter(item => {
-    if (!destinoRuta) return true; // Si no hay destino, muestra todo por defecto
-    // Compara si alguna de las zonas clave coincide con el destino de la ruta actual
+    if (!destinoRuta) return true; 
     return item.zona.some(z => destinoRuta.toLowerCase().includes(z.toLowerCase()));
   });
 
-  // 🛡️ PLAN B (Fallback): Si el filtro estricto no encuentra nada exacto para un destino lejano, 
-  // mostramos las opciones generales de esa categoría para que el usuario nunca se quede con el modal vacío.
   const resultadoFinal = recomendaciones.length > 0 ? recomendaciones : listaCategoria;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-sans">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+      <div className={`rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
         
         {/* Cabecera */}
-        <div className="bg-[#2A4532] text-white p-6 flex justify-between items-center">
+        <div className={`p-6 flex justify-between items-center ${isDarkMode ? 'bg-[#1E3324] border-b border-gray-700 text-white' : 'bg-[#2A4532] text-white'}`}>
           <div>
             <span className="text-xs uppercase tracking-wider text-[#CBE3C7] font-bold">Recomendador Inteligente 🧠</span>
             <h3 className="text-xl font-bold">{categoria} recomendadas</h3>
-            <p className="text-xs text-gray-200 mt-0.5">
+            <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-200'}`}>
               {destinoRuta ? `Optimizadas para tu trayecto a ${destinoRuta}` : "Sugerencias generales para tu viaje"}
             </p>
           </div>
@@ -56,20 +58,20 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
           {resultadoFinal.map((item) => (
             <div 
               key={item.id}
-              className="bg-[#FAF9F6] border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:border-[#2A4532]/40 transition-all shadow-sm"
+              className={`border rounded-2xl p-4 flex items-center justify-between transition-all shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-700 hover:border-emerald-500/40' : 'bg-[#FAF9F6] border-gray-100 hover:border-[#2A4532]/40'}`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl p-2 bg-white rounded-xl shadow-xs">{item.icono}</span>
+                <span className={`text-2xl p-2 rounded-xl shadow-xs ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>{item.icono}</span>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-800">{item.nombre}</h4>
-                  <p className="text-xs text-gray-500">{item.ubicacion}</p>
+                  <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.nombre}</h4>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.ubicacion}</p>
                   <span className="text-xs font-semibold text-[#F97316]">{item.rating}</span>
                 </div>
               </div>
               
               <button 
                 onClick={() => onAgregar(item)}
-                className="bg-[#4F7959] hover:bg-[#2A4532] text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                className="bg-[#4F7959] hover:bg-[#2A4532] text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer shadow-sm"
               >
                 + Agregar
               </button>
@@ -78,10 +80,10 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
+        <div className={`p-4 border-t text-center transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
           <button 
             onClick={onClose}
-            className="text-xs font-bold text-gray-500 hover:text-gray-800 cursor-pointer"
+            className={`text-xs font-bold cursor-pointer ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}
           >
             Cerrar sugerencias
           </button>

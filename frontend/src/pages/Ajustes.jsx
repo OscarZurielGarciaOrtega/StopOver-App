@@ -20,13 +20,18 @@ export default function Ajustes() {
     return localStorage.getItem('stopover_user_correo') || 'MariaA@gmail.com';
   });
 
-  // Función para manejar la subida de la imagen y guardarla en localStorage
+  // Estados para contraseñas
+  const [passwordActual, setPasswordActual] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+
+  // Función para manejar la subida de la imagen y guardarla en localStorage con evento en tiempo real
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setAvatar(imageUrl);
       localStorage.setItem('stopover_user_avatar', imageUrl);
+      window.dispatchEvent(new Event('user_profile_updated'));
     }
   };
 
@@ -35,17 +40,28 @@ export default function Ajustes() {
     const nuevoEstado = !isDarkMode;
     setIsDarkMode(nuevoEstado);
     localStorage.setItem('stopover_dark_mode', nuevoEstado);
-    
-    // 🔔 DISPARA UN EVENTO PARA QUE EL SIDEBAR Y OTRAS VISTAS SE ACTUALICEN AL INSTANTE
     window.dispatchEvent(new Event('storage_updated'));
   };
 
-  // Función para guardar los cambios de perfil en localStorage
+  // Función para guardar los cambios de perfil en localStorage y avisar a las demás vistas
   const handleGuardarPerfil = (e) => {
     e.preventDefault();
     localStorage.setItem('stopover_user_nombre', nombre);
     localStorage.setItem('stopover_user_correo', correo);
+    window.dispatchEvent(new Event('user_profile_updated'));
     alert('¡Perfil y cambios guardados con éxito en el sistema!');
+  };
+
+  // Función para actualizar contraseña
+  const handleActualizarPassword = (e) => {
+    e.preventDefault();
+    if (!passwordNueva) {
+      alert('Por favor escribe tu nueva contraseña.');
+      return;
+    }
+    alert('¡Contraseña actualizada correctamente!');
+    setPasswordActual('');
+    setPasswordNueva('');
   };
 
   return (
@@ -180,8 +196,10 @@ export default function Ajustes() {
                 <div className="relative">
                   <input 
                     type="password" 
-                    defaultValue="*************" 
-                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-[#FAF9F6] border-gray-200 text-gray-400'}`}
+                    value={passwordActual}
+                    onChange={(e) => setPasswordActual(e.target.value)}
+                    placeholder="Escribe tu contraseña actual" 
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-2">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -194,8 +212,10 @@ export default function Ajustes() {
                 <div className="relative">
                   <input 
                     type="password" 
+                    value={passwordNueva}
+                    onChange={(e) => setPasswordNueva(e.target.value)}
                     placeholder="Escribe tu nueva contraseña"
-                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-500'}`}
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-2">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -203,7 +223,10 @@ export default function Ajustes() {
                 </div>
               </div>
 
-              <button onClick={() => alert('¡Contraseña actualizada!')} className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm">
+              <button 
+                onClick={handleActualizarPassword} 
+                className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
                 Actualizar contraseña
               </button>
             </div>

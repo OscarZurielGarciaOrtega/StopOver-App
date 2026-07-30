@@ -1,12 +1,92 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 
 export default function Ajustes() {
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('stopover_dark_mode') === 'true';
+  });
+
+ 
+  const [nombre, setNombre] = useState(() => {
+    return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Maria A';
+  });
+  const [correo, setCorreo] = useState(() => {
+    return localStorage.getItem('email') || localStorage.getItem('stopover_user_correo') || 'kopleskanon@gmail.com';
+  });
+
+  // Estados para contraseñas
+  const [passwordActual, setPasswordActual] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+
+  // 🔔 ESTADOS PARA EL MODAL DE ALERTAS
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertIsError, setAlertIsError] = useState(false);
+
+  const mostrarAlerta = (mensaje, esError = false) => {
+    setAlertMessage(mensaje);
+    setAlertIsError(esError);
+    setAlertModalOpen(true);
+  };
+
+  useEffect(() => {
+    const handleProfileChange = () => {
+      setNombre(localStorage.getItem('nombre') || localStorage.getItem('email') || 'Maria A');
+      setCorreo(localStorage.getItem('email') || localStorage.getItem('stopover_user_correo') || 'kopleskanon@gmail.com');
+    };
+    window.addEventListener('user_profile_updated', handleProfileChange);
+    return () => window.removeEventListener('user_profile_updated', handleProfileChange);
+  }, []);
+
+  // Función para alternar modo oscuro
+  const toggleDarkMode = () => {
+    const nuevoEstado = !isDarkMode;
+    setIsDarkMode(nuevoEstado);
+    localStorage.setItem('stopover_dark_mode', nuevoEstado);
+    window.dispatchEvent(new Event('storage_updated'));
+  };
+
+  // Guardar perfil
+  const handleGuardarPerfil = (e) => {
+    e.preventDefault();
+    localStorage.setItem('nombre', nombre);
+    localStorage.setItem('email', correo);
+    window.dispatchEvent(new Event('user_profile_updated'));
+    mostrarAlerta('¡Perfil y configuración guardados con éxito en el sistema!');
+  };
+
+  // Actualizar contraseña
+  const handleActualizarPassword = (e) => {
+    e.preventDefault();
+    if (!passwordNueva || !passwordActual) {
+      mostrarAlerta('Por favor escribe tu contraseña actual y la nueva antes de actualizar.', true);
+      return;
+    }
+    mostrarAlerta('¡Tu contraseña ha sido actualizada correctamente en el sistema!');
+    setPasswordActual('');
+    setPasswordNueva('');
+  };
+
+  // FUNCIÓN PARA CERRAR SESIÓN
+  const handleCerrarSesion = () => {
+    // Limpiamos los datos de sesión del almacenamiento local
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('nombre');
+    localStorage.removeItem('rol');
+    localStorage.removeItem('stopover_user_correo');
+    localStorage.removeItem('stopover_user_nombre');
+    
+    // Redirigimos al login (ajusta la ruta '/' o '/login' según maneje tu Router)
+    window.location.href = '/';
+  };
+
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-[#FAF9F6]">
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
-      
-      <header className="flex items-center justify-between px-8 py-4 bg-[#FAF9F6] border-b border-gray-200">
+
+      <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -14,111 +94,47 @@ export default function Ajustes() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <img src="https://i.pravatar.cc/150?img=47" alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300" />
-          <span className="text-sm font-semibold text-gray-700">Maria A</span>
+          <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {correo.charAt(0).toUpperCase()}
+          </div>
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{correo}</span>
         </div>
       </header>
 
-      
       <div className="flex flex-1">
-        
-        
-        <aside className="w-64 bg-[#FAF9F6] border-r border-gray-200 flex flex-col pt-6">
-          <nav className="flex flex-col gap-1 px-4">
-  <NavLink
-    to="/nueva-ruta"
-    className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
-      }`
-    }
-  >
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
-    Nueva ruta
-  </NavLink>
+        <Sidebar />
 
-  <NavLink
-    to="/historial"
-    className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
-      }`
-    }
-  >
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-    Historial
-  </NavLink>
-
-  <NavLink
-    to="/favoritos"
-    className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
-      }`
-    }
-  >
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
-    Favoritos
-  </NavLink>
-
-  <NavLink
-    to="/buscar"
-    className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
-      }`
-    }
-  >
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-    Buscar
-  </NavLink>
-
-  <NavLink
-    to="/ajustes"
-    className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-        isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : 'text-gray-400 font-medium hover:bg-gray-50'
-      }`
-    }
-  >
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-    Ajustes
-  </NavLink>
-</nav>
-        </aside>
-
-        
-        <main className="flex-1 p-10 bg-white flex flex-col">
+        <main className={`flex-1 p-10 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
           
-         
           <div className="mb-10">
-            <h2 className="text-xl font-bold text-gray-800">Ajustes de tu cuenta</h2>
-            <p className="text-sm text-gray-400 font-medium mt-1">Administra tu información y preferencias</p>
+            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Ajustes de tu cuenta</h2>
+            <p className="text-sm font-medium mt-1 text-gray-400">Administra tu información y preferencias</p>
           </div>
 
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-16 max-w-5xl">
             
-            
+
             <div>
-              <h3 className="text-[22px] font-medium text-gray-900 mb-2 border-b-2 border-gray-900 pb-2">Perfil</h3>
-              
+              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Perfil</h3>
               
               <div className="flex items-center gap-6 mt-6 mb-6">
-                <img src="https://i.pravatar.cc/150?img=47" alt="Perfil" className="w-16 h-16 rounded-full border border-gray-200 shadow-sm" />
-                <button className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2 rounded-lg transition-colors">
-                  Cambiar foto
-                </button>
+                <div className="w-16 h-16 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-2xl shadow-md border-2 border-gray-300">
+                  {correo.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{nombre}</p>
+                  <p className="text-xs text-gray-400">{correo}</p>
+                </div>
               </div>
 
-              
               <div className="mb-4">
-                <label className="block text-sm text-gray-600 mb-2">Nombre</label>
+                <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nombre</label>
                 <div className="relative">
                   <input 
                     type="text" 
-                    defaultValue="Maria A" 
-                    className="w-full bg-[#FAF9F6] border border-gray-200 text-gray-500 rounded-xl py-2.5 px-4 pr-10 shadow-sm focus:outline-none focus:border-[#4F7959]"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-10 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -126,14 +142,14 @@ export default function Ajustes() {
                 </div>
               </div>
 
-              
               <div className="mb-6">
-                <label className="block text-sm text-gray-600 mb-2">Correo electronico</label>
+                <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Correo electrónico</label>
                 <div className="relative">
                   <input 
                     type="email" 
-                    defaultValue="MariaA@gmail.com" 
-                    className="w-full bg-[#FAF9F6] border border-gray-200 text-gray-500 rounded-xl py-2.5 px-4 pr-10 shadow-sm focus:outline-none focus:border-[#4F7959]"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-10 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -141,98 +157,120 @@ export default function Ajustes() {
                 </div>
               </div>
 
-              <button className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+              <button 
+                onClick={handleGuardarPerfil} 
+                className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
                 Guardar cambios
               </button>
             </div>
 
-            
             <div>
-              <h3 className="text-[22px] font-medium text-gray-900 mb-2 border-b-2 border-gray-900 pb-2">Preferencias</h3>
+              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Preferencias</h3>
               
               <div className="flex flex-col gap-5 mt-6">
-                
-                <div className="flex items-center gap-4 cursor-pointer">
-                  <div className="w-12 h-6 bg-[#567E64] rounded-full relative shadow-inner">
-                    <div className="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm"></div>
+                <div 
+                  className="flex items-center gap-4 cursor-pointer select-none"
+                  onClick={toggleDarkMode}
+                >
+                  <div className={`w-12 h-6 rounded-full relative shadow-inner transition-colors duration-300 ${isDarkMode ? 'bg-[#567E64]' : 'bg-gray-200'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-md border border-gray-100 transition-all duration-300 ${isDarkMode ? 'right-0.5' : 'left-0.5'}`}></div>
                   </div>
-                  <span className="text-gray-700 font-medium">Notificaciones por correo</span>
-                </div>
-
-                
-                <div className="flex items-center gap-4 cursor-pointer">
-                  <div className="w-12 h-6 bg-gray-200 rounded-full relative shadow-inner">
-                    <div className="w-5 h-5 bg-white rounded-full absolute left-0.5 top-0.5 shadow-md border border-gray-100"></div>
-                  </div>
-                  <span className="text-gray-700 font-medium">Modo oscuro</span>
-                </div>
-
-                
-                <div className="mt-2 w-32">
-                  <select className="w-full bg-white border border-gray-200 text-gray-700 rounded-lg py-2 px-3 shadow-sm focus:outline-none focus:border-[#4F7959] appearance-none cursor-pointer">
-                    <option>Español</option>
-                    <option>Inglés</option>
-                  </select>
+                  <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Modo oscuro</span>
                 </div>
               </div>
             </div>
 
-            
+         
             <div>
-              <h3 className="text-[22px] font-medium text-gray-900 mb-2 border-b-2 border-gray-900 pb-2">Seguridad</h3>
-              
+              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Seguridad</h3>
               
               <div className="mt-6 mb-4">
-                <label className="block text-sm text-gray-600 mb-2">Contraseña actual</label>
+                <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Contraseña actual</label>
                 <div className="relative">
                   <input 
                     type="password" 
-                    defaultValue="*************" 
-                    className="w-full bg-[#FAF9F6] border border-gray-200 text-gray-400 rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959]"
+                    value={passwordActual}
+                    onChange={(e) => setPasswordActual(e.target.value)}
+                    placeholder="Escribe tu contraseña actual" 
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-2">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <svg className="w-5 h-5 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                   </div>
                 </div>
               </div>
 
-              
               <div className="mb-6">
-                <label className="block text-sm text-gray-600 mb-2">Nueva contraseña</label>
+                <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nueva contraseña</label>
                 <div className="relative">
                   <input 
                     type="password" 
+                    value={passwordNueva}
+                    onChange={(e) => setPasswordNueva(e.target.value)}
                     placeholder="Escribe tu nueva contraseña"
-                    className="w-full bg-[#FAF9F6] border border-gray-200 text-gray-500 rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959]"
+                    className={`w-full border rounded-xl py-2.5 px-4 pr-16 shadow-sm focus:outline-none focus:border-[#4F7959] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-[#FAF9F6] border-gray-200 text-gray-700'}`}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-2">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <svg className="w-5 h-5 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                   </div>
                 </div>
               </div>
 
-              <button className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+              <button 
+                onClick={handleActualizarPassword} 
+                className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
                 Actualizar contraseña
               </button>
             </div>
-
             
+        
             <div>
-              <h3 className="text-[22px] font-medium text-gray-900 mb-2 border-b-2 border-gray-900 pb-2">Otros...</h3>
-              
+              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Sesión</h3>
+              <p className={`text-sm mb-4 mt-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Finaliza tu sesión actual de forma segura para cambiar de cuenta o rol.
+              </p>
+              <button 
+                onClick={handleCerrarSesion}
+                className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
+                Cerrar sesión
+              </button>
             </div>
 
           </div>
 
-          
           <footer className="text-center text-sm text-gray-500 pt-10 mt-auto">
             StopOver © 2026
           </footer>
 
         </main>
       </div>
+
+    
+      {alertModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+          <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
+            <div className="flex justify-center mb-4">
+              <span className="text-5xl">{alertIsError ? '⚠️' : '✅'}</span>
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              {alertIsError ? 'Atención' : '¡Éxito!'}
+            </h3>
+            <p className={`text-sm mb-8 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              {alertMessage}
+            </p>
+            <button
+              onClick={() => setAlertModalOpen(false)}
+              className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer w-full"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

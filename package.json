@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "tailwindcss": "^3.4.19"
-  },
-  "dependencies": {
-    "react-router-dom": "^7.18.1"
-  }
-}

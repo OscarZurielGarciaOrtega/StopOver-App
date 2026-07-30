@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import api from '../api/axios'; // Importación de la API configurada
+import api from '../api/axios'; 
 import DetailModal from '../components/DetailModal';
 import RecommendationsModal from '../components/RecommendationsModal';
 
@@ -21,12 +21,10 @@ function ChangeView({ center }) {
 }
 
 export default function Dashboard() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE (SIN IMAGEN DE PRUEBA)
   const [nombre, setNombre] = useState(() => {
     return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero';
   });
@@ -39,7 +37,6 @@ export default function Dashboard() {
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
 
-  // 🚀 ESTADOS PARA RUTAS REALES DESDE EL BACKEND
   const [rutas, setRutas] = useState([]);
   const [loadingRutas, setLoadingRutas] = useState(true);
 
@@ -48,7 +45,6 @@ export default function Dashboard() {
       setLoadingRutas(true);
       try {
         const response = await api.get('/rutas');
-        
         const data = response.data.content || response.data;
         
         if (Array.isArray(data)) {
@@ -58,10 +54,10 @@ export default function Dashboard() {
             origen: ruta.origen,
             destino: ruta.destino,
             escala: ruta.paradas && ruta.paradas.length > 0 ? ruta.paradas.map(p => p.nombre).join(', ') : 'Directo (Sin escala)',
-            duracion: ruta.fecha_salida || 'Por definir',
-            estatus: 'Programado' 
+            duracion: ruta.fechaSalida || ruta.fecha_salida || 'Por definir',
+            estatus: ruta.estatus || 'Programado' 
           }));
-          setRutas(rutasFormateadas);
+          setRutas(rutasFormateadas.reverse());
         }
       } catch (error) {
         console.error("Error al cargar rutas del servidor:", error);
@@ -80,6 +76,8 @@ export default function Dashboard() {
   const [destinoTexto, setDestinoTexto] = useState('');
   const [destinoCoords, setDestinoCoords] = useState(null);
 
+  const [fechaSeleccionada, setFechaSeleccionada] = useState('');
+
   const [sugerenciasOrigen, setSugerenciasOrigen] = useState([]);
   const [sugerenciasDestino, setSugerenciasDestino] = useState([]);
 
@@ -93,11 +91,9 @@ export default function Dashboard() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [isRecModalOpen, setIsRecModalOpen] = useState(false);
 
-  // 🔍 ESTADOS PARA LOS FILTROS DE LA TABLA
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('Todos');
 
-  // LÓGICA DE PAGINACIÓN Y FILTRADO
   const [paginaActual, setPaginaActual] = useState(1);
   const rutasPorPagina = 4;
   
@@ -109,7 +105,6 @@ export default function Dashboard() {
       ruta.escala.toLowerCase().includes(busquedaTexto.toLowerCase());
     
     const estatusMatch = filtroEstatus === 'Todos' || ruta.estatus === filtroEstatus;
-
     return textoMatch && estatusMatch;
   });
 
@@ -117,9 +112,6 @@ export default function Dashboard() {
   const indicePrimeraRuta = indiceUltimaRuta - rutasPorPagina;
   const rutasActuales = rutasFiltradas.slice(indicePrimeraRuta, indiceUltimaRuta);
   const totalPaginas = Math.ceil(rutasFiltradas.length / rutasPorPagina) || 1;
-
-  // 📊 LÓGICA DE TENDENCIAS INTELIGENTES (100% DINÁMICO)
-  const totalViajerosHoy = rutas.length > 0 ? rutas.length * 3 : 0;
 
   const conteoEscalas = {};
   rutas.forEach(r => {
@@ -161,12 +153,15 @@ export default function Dashboard() {
     setIsRecModalOpen(false);
   };
 
-  const cancelarRuta = (idRuta) => {
-    const rutasActualizadas = rutas.map(ruta => 
-      ruta.id === idRuta ? { ...ruta, estatus: 'Cancelado' } : ruta
-    );
-    setRutas(rutasActualizadas);
-    setIsDetailModalOpen(false);
+  const cancelarRuta = async (idRutaReal) => {
+    try {
+      await api.delete(`/rutas/${idRutaReal}`);
+      setRutas(rutas.filter(r => r.idReal !== idRutaReal));
+      setIsDetailModalOpen(false);
+    } catch (error) {
+      console.error("Error al cancelar/borrar la ruta:", error);
+      alert("No se pudo eliminar la ruta en el servidor.");
+    }
   };
 
   const buscarLugarAPI = async (texto, setSugerenciasState) => {
@@ -174,28 +169,19 @@ export default function Dashboard() {
       setSugerenciasState([]);
       return;
     }
-    
     try {
       const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(texto)}&count=5&language=es&format=json`);
       const data = await response.json();
-      
       if (!data || !data.results) {
         setSugerenciasState([]);
         return;
       }
-
       const resultados = data.results.map(item => {
         let label = item.name;
         if (item.admin1) label += `, ${item.admin1}`;
         if (item.country) label += `, ${item.country}`;
-
-        return {
-          label: label,
-          lat: item.latitude,
-          lon: item.longitude
-        };
+        return { label: label, lat: item.latitude, lon: item.longitude };
       });
-
       setSugerenciasState(resultados);
     } catch (error) {
       console.error("Error al consultar la API:", error);
@@ -208,15 +194,12 @@ export default function Dashboard() {
       const url = `https://router.project-osrm.org/route/v1/driving/${orig[1]},${orig[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
       const res = await fetch(url);
       const data = await res.json();
-
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
         const coordsFormateadas = route.geometry.coordinates.map(c => [c[1], c[0]]);
         setRouteCoords(coordsFormateadas);
-
         const km = (route.distance / 1000).toFixed(1);
         setDistanciaKm(km);
-
         const horas = Math.floor(route.duration / 3600);
         const minutos = Math.round((route.duration % 3600) / 60);
         setDuracionTexto(`${horas > 0 ? horas + ' h ' : ''}${minutos} m`);
@@ -230,9 +213,8 @@ export default function Dashboard() {
   const getStatusClass = (estatus) => {
     switch (estatus) {
       case 'Programado': return 'bg-purple-100 text-purple-700';
-      case 'En Tránsito': return 'bg-green-100 text-green-700';
-      case 'Completado': return 'bg-blue-100 text-blue-700';
-      case 'Retrasado': return 'bg-red-100 text-red-700';
+      case 'En Tránsito': return 'bg-blue-100 text-blue-700';
+      case 'Completado': return 'bg-emerald-100 text-emerald-700';
       case 'Cancelado': return 'bg-gray-200 text-gray-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -241,6 +223,10 @@ export default function Dashboard() {
   const mapCenter = destinoCoords 
     ? [(origenCoords[0] + destinoCoords[0]) / 2, (origenCoords[1] + destinoCoords[1]) / 2] 
     : origenCoords;
+
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  const minDate = manana.toISOString().split('T')[0];
 
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
@@ -253,7 +239,6 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         
-        {/* MAGIA AQUÍ: CÍRCULO CON INICIAL EN VEZ DE IMAGEN */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
             {nombre.charAt(0).toUpperCase()}
@@ -263,84 +248,32 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-1">
-        
         <aside className={`w-64 border-r flex flex-col pt-6 transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-[#FAF9F6] border-gray-200'}`}>
           <nav className="flex flex-col gap-1 px-4">
-            <NavLink
-              to="/nueva-ruta"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
-                }`
-              }
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
+            <NavLink to="/nueva-ruta" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
               Nueva ruta
             </NavLink>
-
-            <NavLink
-              to="/historial"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
-                }`
-              }
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <NavLink to="/historial" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               Historial
             </NavLink>
-
-            <NavLink
-              to="/favoritos"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
-                }`
-              }
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
+            <NavLink to="/favoritos" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
               Favoritos
             </NavLink>
-
-            <NavLink
-              to="/buscar"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
-                }`
-              }
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <NavLink to="/buscar" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               Buscar
             </NavLink>
-
-            <NavLink
-              to="/ajustes"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'
-                }`
-              }
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+            <NavLink to="/ajustes" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#CBE3C7] text-[#2A4532] font-bold' : isDarkMode ? 'text-gray-400 font-medium hover:bg-gray-800' : 'text-gray-400 font-medium hover:bg-gray-50'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               Ajustes
             </NavLink>
           </nav>
         </aside>
 
         <main className={`flex-1 p-8 rounded-tl-3xl shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-t border-l flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
-          
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Rutas recientes</h2>
@@ -352,6 +285,7 @@ export default function Dashboard() {
                 setRouteCoords([]);
                 setDistanciaKm(null);
                 setDuracionTexto(null);
+                setFechaSeleccionada('');
               }}
               className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[#1E3324] transition-colors shadow-md cursor-pointer"
             >
@@ -364,18 +298,12 @@ export default function Dashboard() {
               type="text" 
               placeholder="Buscar por origen, destino o parada" 
               value={busquedaTexto}
-              onChange={(e) => {
-                setBusquedaTexto(e.target.value);
-                setPaginaActual(1);
-              }}
+              onChange={(e) => { setBusquedaTexto(e.target.value); setPaginaActual(1); }}
               className={`border rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
             />
             <select 
               value={filtroEstatus}
-              onChange={(e) => {
-                setFiltroEstatus(e.target.value);
-                setPaginaActual(1);
-              }}
+              onChange={(e) => { setFiltroEstatus(e.target.value); setPaginaActual(1); }}
               className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
             >
               <option value="Todos">Estatus: Todos</option>
@@ -411,7 +339,7 @@ export default function Dashboard() {
                       <td className="py-4 px-2 font-medium">{ruta.id}</td>
                       <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
                       <td className="py-4 px-2 text-gray-500">{ruta.escala}</td>
-                      <td className="py-4 px-2">{ruta.duracion}</td>
+                      <td className="py-4 px-2 font-semibold">{ruta.duracion}</td>
                       <td className="py-4 px-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>
                           {ruta.estatus}
@@ -452,7 +380,6 @@ export default function Dashboard() {
               >
                 &lt;
               </button>
-              
               {[...Array(totalPaginas)].map((_, index) => (
                 <button 
                   key={index}
@@ -462,7 +389,6 @@ export default function Dashboard() {
                   {index + 1}
                 </button>
               ))}
-
               <button 
                 onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
                 disabled={paginaActual === totalPaginas}
@@ -477,26 +403,15 @@ export default function Dashboard() {
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-gray-400 mb-4">Categorías más buscadas</h3>
               <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => abrirRecomendaciones('Cafeterías')}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
-                >
+                <button onClick={() => abrirRecomendaciones('Cafeterías')} className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}>
                   <span className="flex items-center gap-2">☕ Cafeterías</span>
                   <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
-                
-                <button 
-                  onClick={() => abrirRecomendaciones('Miradores')}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
-                >
+                <button onClick={() => abrirRecomendaciones('Miradores')} className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}>
                   <span className="flex items-center gap-2">📸 Miradores</span>
                   <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
-                
-                <button 
-                  onClick={() => abrirRecomendaciones('Pueblos mágicos')}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}
-                >
+                <button onClick={() => abrirRecomendaciones('Pueblos mágicos')} className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all cursor-pointer shadow-xs border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-[#FFF8F3] hover:bg-[#FFEEDB] text-[#F97316] border-orange-100/50'}`}>
                   <span className="flex items-center gap-2">✨ Pueblos mágicos</span>
                   <span className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-gray-700 text-orange-300' : 'bg-orange-200/60'}`}>Sugerencias ›</span>
                 </button>
@@ -523,7 +438,6 @@ export default function Dashboard() {
           <footer className="text-center text-sm text-gray-500 pt-8 mt-auto">
             StopOver © 2026
           </footer>
-
         </main>
       </div>
 
@@ -538,10 +452,10 @@ export default function Dashboard() {
 
             <div className="p-6 flex flex-col gap-4 overflow-visible">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative overflow-visible">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative overflow-visible">
                 
                 <div className="relative">
-                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Origen del viaje</label>
+                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Origen</label>
                   <input 
                     type="text" 
                     value={origenTexto}
@@ -553,21 +467,10 @@ export default function Dashboard() {
                     placeholder="Escribe origen..."
                     className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
                   />
-                  
                   {sugerenciasOrigen.length > 0 && (
                     <ul className={`absolute z-50 left-0 right-0 border rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
                       {sugerenciasOrigen.map((item, idx) => (
-                        <li 
-                          key={idx}
-                          onClick={() => {
-                            setOrigenTexto(item.label);
-                            const nuevasCoords = [item.lat, item.lon];
-                            setOrigenCoords(nuevasCoords);
-                            setSugerenciasOrigen([]);
-                            if (destinoCoords) calcularRutaCarretera(nuevasCoords, destinoCoords);
-                          }}
-                          className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}
-                        >
+                        <li key={idx} onClick={() => { setOrigenTexto(item.label); const nuevasCoords = [item.lat, item.lon]; setOrigenCoords(nuevasCoords); setSugerenciasOrigen([]); if (destinoCoords) calcularRutaCarretera(nuevasCoords, destinoCoords); }} className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}>
                           📍 {item.label}
                         </li>
                       ))}
@@ -588,26 +491,26 @@ export default function Dashboard() {
                     placeholder="Escribe destino..." 
                     className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
                   />
-
                   {sugerenciasDestino.length > 0 && (
                     <ul className={`absolute z-50 left-0 right-0 border rounded-xl mt-1 shadow-2xl max-h-48 overflow-y-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
                       {sugerenciasDestino.map((item, idx) => (
-                        <li 
-                          key={idx}
-                          onClick={() => {
-                            setDestinoTexto(item.label);
-                            const nuevasCoords = [item.lat, item.lon];
-                            setDestinoCoords(nuevasCoords);
-                            setSugerenciasDestino([]);
-                            calcularRutaCarretera(origenCoords, nuevasCoords);
-                          }}
-                          className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}
-                        >
+                        <li key={idx} onClick={() => { setDestinoTexto(item.label); const nuevasCoords = [item.lat, item.lon]; setDestinoCoords(nuevasCoords); setSugerenciasDestino([]); calcularRutaCarretera(origenCoords, nuevasCoords); }} className={`px-4 py-2.5 text-xs font-medium border-b cursor-pointer ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-gray-50 hover:bg-[#CBE3C7]/60 text-gray-700'}`}>
                           🎯 {item.label}
                         </li>
                       ))}
                     </ul>
                   )}
+                </div>
+
+                <div className="relative">
+                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Fecha de salida</label>
+                  <input 
+                    type="date" 
+                    min={minDate}
+                    value={fechaSeleccionada}
+                    onChange={(e) => setFechaSeleccionada(e.target.value)}
+                    className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
+                  />
                 </div>
 
               </div>
@@ -620,31 +523,14 @@ export default function Dashboard() {
               )}
 
               <div className="relative w-full h-72 rounded-2xl overflow-hidden border border-gray-200 shadow-inner z-10 mt-2">
-                <MapContainer 
-                  center={mapCenter} 
-                  zoom={destinoCoords ? 7 : 13} 
-                  style={{ width: '100%', height: '100%' }}
-                >
+                <MapContainer center={mapCenter} zoom={destinoCoords ? 7 : 13} style={{ width: '100%', height: '100%' }}>
                   <ChangeView center={mapCenter} />
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  
-                  <Marker position={origenCoords}>
-                    <Popup>Origen: {origenTexto}</Popup>
-                  </Marker>
-
+                  <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={origenCoords}><Popup>Origen: {origenTexto}</Popup></Marker>
                   {destinoCoords && (
                     <>
-                      <Marker position={destinoCoords}>
-                        <Popup>Destino: {destinoTexto}</Popup>
-                      </Marker>
-                      <Polyline 
-                        positions={routeCoords.length > 0 ? routeCoords : [origenCoords, destinoCoords]} 
-                        color="#2A4532" 
-                        weight={5} 
-                      />
+                      <Marker position={destinoCoords}><Popup>Destino: {destinoTexto}</Popup></Marker>
+                      <Polyline positions={routeCoords.length > 0 ? routeCoords : [origenCoords, destinoCoords]} color="#2A4532" weight={5} />
                     </>
                   )}
                 </MapContainer>
@@ -658,37 +544,29 @@ export default function Dashboard() {
                   Cancelar
                 </button>
                 
-                {/* MAGIA AQUÍ: PETICIÓN REAL POST AL BACKEND */}
                 <button 
                   onClick={async () => {
-                    if (!origenTexto || !destinoCoords) {
-                      alert('Por favor selecciona un destino válido de la lista.');
+                    if (!origenTexto || !destinoCoords || !fechaSeleccionada) {
+                      alert('Por favor selecciona un destino de la lista y una fecha de salida válida.');
                       return;
                     }
                     
                     try {
-                      const fechaActual = new Date().toISOString().split('T')[0];
-                      
-                      // Hacemos el POST real a la base de datos
                       await api.post('/rutas', {
                         nombre: `Viaje a ${destinoTexto.split(',')[0]}`,
                         origen: origenTexto.split(',')[0],
                         destino: destinoTexto.split(',')[0],
-                        fechaSalida: fechaActual, // <-- ¡MAGIA APLICADA AQUÍ! (camelCase)
-                        paradaIds: [] // Arreglo vacío
+                        fechaSalida: fechaSeleccionada, 
+                        paradaIds: [] // Limpio y sin hacks, como lo pide la documentación oficial
                       });
 
                       setIsMapModalOpen(false);
-                      // Refrescamos la pantalla para que el GET jale la ruta recién creada
                       window.location.reload(); 
                       
                     } catch (error) {
-                      console.error("Error al guardar la ruta en el servidor:", error.response?.data);
-                      
-                      // EXTRAEMOS EL MENSAJE PARA EL ALERT
+                      console.error("Error al guardar la ruta en el servidor:", error);
                       const mensajeBackend = error.response?.data?.mensajes?.[0] || error.response?.data?.message || 'Error de formato (400)';
-                      
-                      alert(`El servidor rechazó los datos:\n👉 ${mensajeBackend}\n\nRecuerda decirle a Emma que quite la validación del arreglo vacío en las paradas.`);
+                      alert(`El servidor rechazó los datos:\n👉 ${mensajeBackend}`);
                     }
                   }}
                   className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer"
@@ -706,8 +584,8 @@ export default function Dashboard() {
       <DetailModal 
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
-        rutaId={rutaSeleccionada ? rutaSeleccionada.idReal : null}
-        onCancelar={() => rutaSeleccionada && cancelarRuta(rutaSeleccionada.id)}
+        rutaInfo={rutaSeleccionada} 
+        onCancelar={() => rutaSeleccionada && cancelarRuta(rutaSeleccionada.idReal)}
       />
 
       <RecommendationsModal 

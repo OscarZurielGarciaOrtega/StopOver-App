@@ -36,20 +36,34 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Petición real al backend de Emma
+      // 🚀 Petición oficial al backend de Emma
       const response = await api.post('/auth/login', { email, password });
       
-      // Guardamos el token, rol y correo en el localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('rol', response.data.rol);
-      localStorage.setItem('nombre', email); // <-- AQUÍ SE GUARDA TU CORREO PARA EL DASHBOARD
+      // La respuesta oficial trae: { token, email, rol }
+      const token = response.data.token;
+      const rol = response.data.rol ? response.data.rol.toUpperCase().trim() : 'VIAJERO';
       
-      // Mandamos al usuario a su respectiva ruta o dashboard
-      navigate('/nueva-ruta');
+      // Guardamos en el localStorage exactamente lo que pide la API
+      localStorage.setItem('token', token);
+      localStorage.setItem('rol', rol);
+      localStorage.setItem('email', email);
+      localStorage.setItem('nombre', email);
+      
+      window.dispatchEvent(new Event('user_profile_updated'));
+
+      // 🔀 REDIRECCIÓN EXACTA SEGÚN EL ROL DE LA BASE DE DATOS
+      if (rol === 'ADMIN') {
+        navigate('/admin/negocios/pendientes'); 
+      } else if (rol === 'PROPIETARIO') {
+        navigate('/negocios/registrar'); // O la ruta de registro/panel de propietario que tengas configurada
+      } else {
+        navigate('/nueva-ruta'); // Rol VIAJERO por defecto
+      }
+
     } catch (err) {
-      console.error(err);
+      console.error("Error en login con backend:", err);
       
-      const mensajeError = err.response?.data?.mensajes?.[0] || 'Credenciales incorrectas o error al conectar con el servidor';
+      const mensajeError = err.response?.data?.mensajes?.[0] || err.response?.data?.message || 'Credenciales incorrectas o error al conectar con el servidor';
       setServerError(mensajeError);
       
     } finally {
@@ -91,7 +105,7 @@ export default function Login() {
                     if (errors.email) setErrors({ ...errors, email: '' });
                   }}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
-                  placeholder="admin@stopover.com"
+                  placeholder="tucorreo@email.com"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

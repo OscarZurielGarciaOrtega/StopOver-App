@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Recovery from './pages/Recovery';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Historial from './pages/Historial';
 import Favoritos from './pages/Favoritos';
@@ -24,6 +25,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/recuperar" element={<Recovery />} />
+        <Route path="/reset-password" element={<ResetPassword />} /> {/* 👈 Ruta agregada */}
         
         {/* Rutas de Negocio y Admin (Aseguramos ambos alias de ruta para que nunca falle) */}
         <Route path="/mi-negocio" element={<MiNegocio />} />

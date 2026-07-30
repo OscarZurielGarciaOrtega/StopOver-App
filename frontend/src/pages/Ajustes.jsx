@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 
 export default function Ajustes() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR NOMBRE Y CORREO DESDE LOCALSTORAGE
+ 
   const [nombre, setNombre] = useState(() => {
     return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Maria A';
   });
@@ -68,7 +68,7 @@ export default function Ajustes() {
     setPasswordNueva('');
   };
 
-  // 🚪 FUNCIÓN PARA CERRAR SESIÓN
+  // FUNCIÓN PARA CERRAR SESIÓN
   const handleCerrarSesion = () => {
     // Limpiamos los datos de sesión del almacenamiento local
     localStorage.removeItem('token');
@@ -85,7 +85,7 @@ export default function Ajustes() {
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
-      {/* Header con inicial idéntica */}
+
       <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@ export default function Ajustes() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-16 max-w-5xl">
             
-            {/* PERFIL */}
+
             <div>
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Perfil</h3>
               
@@ -165,7 +165,6 @@ export default function Ajustes() {
               </button>
             </div>
 
-            {/* PREFERENCIAS */}
             <div>
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Preferencias</h3>
               
@@ -182,7 +181,7 @@ export default function Ajustes() {
               </div>
             </div>
 
-            {/* SEGURIDAD */}
+         
             <div>
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Seguridad</h3>
               
@@ -226,7 +225,7 @@ export default function Ajustes() {
               </button>
             </div>
             
-            {/* OTROS / SESIÓN */}
+        
             <div>
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Sesión</h3>
               <p className={`text-sm mb-4 mt-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -249,7 +248,7 @@ export default function Ajustes() {
         </main>
       </div>
 
-      {/* MODAL DE ALERTAS */}
+    
       {alertModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>

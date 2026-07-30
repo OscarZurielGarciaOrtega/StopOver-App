@@ -1,0 +1,18 @@
+info:
+  name: Acceso denegado (403)
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/usuarios"
+  headers:
+    - name: Authorization
+      value: Bearer {{tokenViajero}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

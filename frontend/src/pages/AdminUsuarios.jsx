@@ -28,7 +28,7 @@ export default function AdminUsuarios() {
   const [nuevoRol, setNuevoRol] = useState('VIAJERO');
   const [nuevoPassword, setNuevoPassword] = useState('Password123!');
 
-  // 🚀 CARGAR USUARIOS DESDE EL BACKEND
+
   const fetchUsuarios = async () => {
     try {
       setCargando(true);
@@ -55,7 +55,7 @@ export default function AdminUsuarios() {
     fetchUsuarios();
   }, []);
 
-  // 🔒 BLOQUEAR / DESBLOQUEAR REAL CON EL BACKEND
+
   const handleToggleBloqueo = async (id, estatusActual) => {
     try {
       const nuevoEstatus = estatusActual === 'Activo' ? 'Bloqueado' : 'Activo';
@@ -73,7 +73,6 @@ export default function AdminUsuarios() {
     }
   };
 
-  // 🔴 Eliminar usuario real
   const handleOpenDeleteModal = (id) => {
     setUsuarioAEliminar(id);
     setIsDeleteModalOpen(true);
@@ -91,7 +90,6 @@ export default function AdminUsuarios() {
     }
   };
 
-  // 🟢 Crear Usuario Real (Endpoint de Admin)
   const handleCrearUsuario = async (e) => {
     e.preventDefault();
     if (!nuevoNombre || !nuevoCorreo) {
@@ -123,14 +121,13 @@ export default function AdminUsuarios() {
     }
   };
 
-  // 🔵 Abrir modal de Cambio de Rol
+
   const handleAbrirModalRol = (usuario) => {
     setUsuarioSeleccionado(usuario);
     setNuevoRolSeleccionado(usuario.rol);
     setIsRolModalOpen(true);
   };
 
-  // 🔵 Confirmar Cambio de Rol Real con el Backend
   const handleConfirmarCambioRol = async (e) => {
     e.preventDefault();
     try {
@@ -258,7 +255,6 @@ export default function AdminUsuarios() {
         </main>
       </div>
 
-      {/* 🔵 MODAL PARA CAMBIAR ROL */}
       {isRolModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
@@ -303,7 +299,7 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      {/* 🟢 MODAL PARA CREAR NUEVO USUARIO */}
+   
       {isNuevoModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-md rounded-3xl shadow-2xl p-6 border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
@@ -379,7 +375,7 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      {/* 🔴 MODAL DE CONFIRMACIÓN PARA ELIMINAR */}
+    
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

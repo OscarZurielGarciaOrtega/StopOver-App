@@ -1,0 +1,25 @@
+info:
+  name: Listar mis rutas
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/rutas?page=0&size=5"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: size
+      value: "5"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

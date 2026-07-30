@@ -167,7 +167,7 @@ export default function Dashboard() {
       console.warn("Aviso de red en API de paradas:", err);
     }
 
-    // Persistencia estricta en localStorage
+
     const escalasGuardadas = JSON.parse(localStorage.getItem('stopover_escalas_rutas') || '{}');
     const escalaActualRuta = escalasGuardadas[idRutaReal];
     

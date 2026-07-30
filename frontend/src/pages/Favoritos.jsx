@@ -6,7 +6,7 @@ export default function Favoritos() {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR PERFIL DINÁMICO
+
   const [nombre, setNombre] = useState(() => {
     return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero';
   });
@@ -19,7 +19,7 @@ export default function Favoritos() {
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
 
-  // 💖 CARGAR FAVORITOS DESDE LOCALSTORAGE (O USAR RESPALDO SI ESTÁ VACÍO)
+
   const [favoritos, setFavoritos] = useState(() => {
     const guardados = localStorage.getItem('stopover_favoritos');
     if (guardados) {
@@ -29,7 +29,7 @@ export default function Favoritos() {
         console.error("Error al leer favoritos", e);
       }
     }
-    // Respaldo inicial para que no se vea vacío la primera vez
+   
     return [
       { 
         id: 1, 
@@ -61,7 +61,7 @@ export default function Favoritos() {
     ];
   });
 
-  // Sincronizar cambios en localStorage cada vez que se modifiquen los favoritos
+ 
   useEffect(() => {
     localStorage.setItem('stopover_favoritos', JSON.stringify(favoritos));
   }, [favoritos]);
@@ -91,7 +91,7 @@ export default function Favoritos() {
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
-      {/* HEADER CON LA INICIAL LIMPIA */}
+  
       <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -152,7 +152,6 @@ export default function Favoritos() {
                     <img src={lugar.img} alt={lugar.title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
 
-                    {/* Botón para eliminar de favoritos */}
                     <button 
                       onClick={() => toggleFavorito(lugar.id)}
                       title="Eliminar de favoritos"

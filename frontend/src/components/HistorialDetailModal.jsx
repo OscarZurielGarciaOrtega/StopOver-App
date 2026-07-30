@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
 
-  // Estados para el sistema de reseñas y estrellas
+
   const [estrellas, setEstrellas] = useState(5);
   const [comentario, setComentario] = useState('');
   const [enviado, setEnviado] = useState(false);
@@ -18,13 +18,13 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
 
   if (!isOpen || !rutaInfo) return null;
 
-  // 🧮 Lógica para separar las paradas visitadas
+ 
   let paradas = [];
   if (rutaInfo.escala && !rutaInfo.escala.includes('Directo') && !rutaInfo.escala.includes('Por definir')) {
     paradas = rutaInfo.escala.split(',').map(p => p.trim());
   }
 
-  // Guardar la reseña enviada por el viajero
+
   const handleSubmitReseña = (e) => {
     e.preventDefault();
     const reseñasGuardadas = JSON.parse(localStorage.getItem('stopover_reseñas_negocio') || '[]');
@@ -43,8 +43,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
       <div className={`w-full max-w-md max-h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
-        
-        {/* Header */}
+      
         <div className={`flex justify-between items-center p-6 border-b shrink-0 ${isDarkMode ? 'border-gray-700 bg-[#1E3324]/30' : 'bg-gray-50 border-gray-100'}`}>
           <div>
             <span className="text-xs font-bold text-[#4F7959] uppercase tracking-wider">Bitácora de viaje</span>
@@ -53,10 +52,10 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
           <button onClick={onClose} className={`text-xl font-bold cursor-pointer transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}>✕</button>
         </div>
 
-        {/* Body */}
+       
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           
-          {/* Recorrido */}
+    
           <div className="flex gap-4">
             <div className="mt-1 text-red-500 text-xl">📍</div>
             <div>
@@ -65,7 +64,6 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
             </div>
           </div>
 
-          {/* Fecha / Duración */}
           <div className="flex gap-4">
             <div className="mt-1 text-purple-500 text-xl">⏱️</div>
             <div>
@@ -74,7 +72,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
             </div>
           </div>
 
-          {/* Estatus Final */}
+         
           <div className="flex gap-4">
             <div className="mt-1 text-green-500 text-xl">📋</div>
             <div>
@@ -83,7 +81,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
             </div>
           </div>
 
-          {/* Lugares visitados */}
+       
           <div>
             <div className="flex gap-2 items-center mb-4">
               <span className="text-blue-500 text-xl">📸</span>
@@ -115,7 +113,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
             </div>
           </div>
 
-          {/* Valoración y Reseña */}
+          
           <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`text-sm font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>🌟 Valora tu experiencia</h4>
             
@@ -160,7 +158,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
 
         </div>
 
-        {/* Footer */}
+       
         <div className={`p-6 border-t flex justify-end items-center shrink-0 ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-100 bg-white'}`}>
           <button 
             onClick={onClose}

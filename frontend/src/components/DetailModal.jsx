@@ -62,7 +62,7 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
                   <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Origen → Destino:</h4>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{rutaInfo.origen} → {rutaInfo.destino}</p>
                 </div>
-                {/* 🧭 BOTÓN PARA VER LA RUTA EN VIVO HACIA EL DESTINO FINAL */}
+                
                 <button 
                   onClick={() => setIsDestinoMapOpen(true)}
                   className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
@@ -182,14 +182,14 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
         </div>
       </div>
 
-      {/* Modal para paradas (el que ya tenías) */}
+     
       <ParadaMapModal 
         isOpen={!!paradaNavegacion} 
         onClose={() => setParadaNavegacion(null)} 
         paradaNombre={paradaNavegacion}
       />
 
-      {/* Modal nuevo para rastrear la ruta en vivo hacia el Destino Final */}
+    
       <DestinoMapModal 
         isOpen={isDestinoMapOpen}
         onClose={() => setIsDestinoMapOpen(false)}

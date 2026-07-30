@@ -15,7 +15,7 @@ export default function MiNegocio() {
     return localStorage.getItem('nombre') || localStorage.getItem('stopover_user_nombre') || 'Paola Sánchez';
   });
 
-  // ESTADOS DEL FORMULARIO DEL NEGOCIO
+
   const [nombreNegocio, setNombreNegocio] = useState('');
   const [categoria, setCategoria] = useState('CAFETERIA');
   const [ubicacion, setUbicacion] = useState('');
@@ -25,17 +25,17 @@ export default function MiNegocio() {
   const [descripcion, setDescripcion] = useState('');
   const [cargando, setCargando] = useState(true);
 
-  // 📊 ESTADOS DINÁMICOS PARA LAS TARJETAS DE MÉTRICAS
+
   const [visitas, setVisitas] = useState(0);
   const [favoritos, setFavoritos] = useState(0);
   const [valoracion, setValoracion] = useState(0.0);
 
-  // FOTO PRINCIPAL (Se guarda localmente para la UI, pero no se manda al back aún)
+ 
   const [imagenNegocio, setImagenNegocio] = useState(() => {
     return localStorage.getItem('stopover_negocio_imagen') || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80';
   });
 
-  // 🔔 ESTADOS PARA EL MODAL DE ALERTAS
+  
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertIsError, setAlertIsError] = useState(false);
@@ -46,7 +46,7 @@ export default function MiNegocio() {
     setAlertModalOpen(true);
   };
 
-  // 🚀 CARGAR DATOS DEL NEGOCIO DESDE EL BACKEND
+  // CARGAR DATOS DEL NEGOCIO DESDE EL BACKEND
   useEffect(() => {
     const obtenerNegocio = async () => {
       try {
@@ -99,7 +99,7 @@ export default function MiNegocio() {
     }
   };
 
-  // 💾 GUARDAR / REGISTRAR NEGOCIO EN EL BACKEND (PETICIÓN REAL SIN IMAGEN)
+  //  GUARDAR / REGISTRAR NEGOCIO EN EL BACKEND 
   const handleGuardarNegocio = async (e) => {
     e.preventDefault();
     try {
@@ -110,7 +110,7 @@ export default function MiNegocio() {
         direccion: ubicacion,
         latitud: parseFloat(latitud) || 17.0754,
         longitud: parseFloat(longitud) || -96.7236
-        // 🚨 Se omite imagenUrl a propósito para evitar el Error 500 de PostgreSQL
+     
       };
 
       // Petición POST real a la API de Spring Boot
@@ -163,7 +163,7 @@ export default function MiNegocio() {
             </button>
           </div>
 
-          {/* TARJETAS DE MÉTRICAS */}
+         
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className={`p-6 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               <span className="text-sm font-medium text-gray-400">Visitas a tu perfil hoy</span>
@@ -181,7 +181,7 @@ export default function MiNegocio() {
             </div>
           </div>
 
-          {/* FORMULARIO CONECTADO A API */}
+        
           <div className={`p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border w-full max-w-4xl transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             <h3 className={`text-lg font-bold mb-6 border-b pb-4 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-100'}`}>
               {cargando ? 'Cargando...' : 'Información del Establecimiento'}
@@ -266,7 +266,7 @@ export default function MiNegocio() {
               ></textarea>
             </div>
 
-            {/* FOTOGRAFÍA PRINCIPAL */}
+           
             <div className="mt-6">
               <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Fotografía principal</label>
               
@@ -305,7 +305,7 @@ export default function MiNegocio() {
         </main>
       </div>
 
-      {/* MODAL DE ALERTAS */}
+   
       {alertModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>

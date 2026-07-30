@@ -36,7 +36,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // 🚀 Petición oficial al backend de Emma
+      //  Petición oficial al backend
       const response = await api.post('/auth/login', { email, password });
       
       // La respuesta oficial trae: { token, email, rol }
@@ -51,7 +51,7 @@ export default function Login() {
       
       window.dispatchEvent(new Event('user_profile_updated'));
 
-      // 🔀 REDIRECCIÓN EXACTA SEGÚN EL ROL DE LA BASE DE DATOS
+      // REDIRECCIÓN EXACTA SEGÚN EL ROL DE LA BASE DE DATOS
       if (rol === 'ADMIN') {
         navigate('/admin/negocios/pendientes'); 
       } else if (rol === 'PROPIETARIO') {
@@ -75,13 +75,13 @@ export default function Login() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-        {/* Lado izquierdo - Ilustración */}
+       
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
           <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        {/* Lado derecho - Formulario */}
+     
         <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#FAFAF8]">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Bienvenido de vuelta!</h2>
           <p className="text-gray-500 font-medium mb-8">Ingresa tus datos para continuar tu viaje</p>

@@ -1,0 +1,1 @@
+ALTER TABLE negocios ADD COLUMN imagen_url VARCHAR(500);

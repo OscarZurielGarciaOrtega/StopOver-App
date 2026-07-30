@@ -9,7 +9,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
-  const [serverError, setServerError] = useState(''); // <-- Nuevo estado para los errores de Emma
+  const [serverError, setServerError] = useState(''); 
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,7 +30,7 @@ export default function Register() {
       newErrors.name = 'El nombre es obligatorio';
     }
 
-    // 2. Validar Correo (Estilo Login)
+    // 2. Validar Correo 
     if (!formData.email.trim()) {
       newErrors.email = 'El correo es obligatorio';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -61,14 +61,14 @@ export default function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // AQUÍ ESTÁ LA MAGIA: Convertimos la función a asíncrona
+
   const handleSubmit = async (e) => {
     e.preventDefault(); 
-    setServerError(''); // Limpiamos errores previos del servidor
+    setServerError(''); 
 
     if (validateForm()) {
       try {
-        // Hacemos el POST al endpoint de Emma mapeando los campos como ella los pide
+ 
         await api.post('/auth/registro', {
           nombre: formData.name, 
           email: formData.email,
@@ -76,10 +76,10 @@ export default function Register() {
           password: formData.password
         });
         
-        // Si todo sale 100% bien en el backend, mostramos tu modal nativo de Tailwind
+    
         setShowModal(true);
       } catch (error) {
-        // Leemos el error estandarizado de Emma (ej. "El correo ya existe")
+   
         const mensajeError = error.response?.data?.mensajes?.[0] || 'Error al conectar con el servidor';
         setServerError(mensajeError);
       }
@@ -90,18 +90,18 @@ export default function Register() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans relative">
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-        {/* Lado Izquierdo */}
+  
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
           <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        {/* Lado Derecho */}
+    
         <div className="w-full md:w-7/12 p-8 md:px-16 md:py-10 flex flex-col justify-center bg-[#FAFAF8]">
           <h2 className="text-2xl font-bold text-gray-800 mb-1">¡Únete al viaje!</h2>
           <p className="text-gray-500 font-medium mb-6">Crea tu cuenta y empieza a planear</p>
 
-          {/* AQUÍ IMPRIMIMOS EL ERROR DEL SERVIDOR SI ES QUE HAY ALGUNO */}
+   
           {serverError && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded-xl font-medium">
               {serverError}
@@ -206,7 +206,7 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Modal Nativo Tailwind */}
+     
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
           <div className="bg-white rounded-[24px] p-8 max-w-sm w-full text-center shadow-2xl">

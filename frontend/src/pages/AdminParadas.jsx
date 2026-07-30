@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import api from '../api/axios'; // 🚀 Importamos la conexión al backend
+import api from '../api/axios'; 
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -27,11 +27,10 @@ export default function AdminParadas() {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 🚀 ESTADOS CONECTADOS AL BACKEND
+
   const [paradas, setParadas] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  // ESTADOS PARA MODALES
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [paradaAEliminar, setParadaAEliminar] = useState(null);
 
@@ -42,15 +41,15 @@ export default function AdminParadas() {
   const [nuevaCoord, setNuevaCoord] = useState([17.0754, -96.7236]);
   const [nuevaDescripcion, setNuevaDescripcion] = useState('');
 
-  // ESTADO PARA MODAL DE MAPA
+
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [paradaSeleccionadaMapa, setParadaSeleccionadaMapa] = useState(null);
 
-  // 📥 CARGAR PARADAS (Aprobadas y Pendientes)
+
   const fetchParadas = async () => {
     try {
       setCargando(true);
-      // Hacemos las dos peticiones en paralelo para mayor velocidad
+  
       const [pendientesRes, aprobadosRes] = await Promise.all([
         api.get('/admin/negocios/pendientes'),
         api.get('/negocios/aprobados')
@@ -59,17 +58,17 @@ export default function AdminParadas() {
       const pendientes = Array.isArray(pendientesRes.data) ? pendientesRes.data : (pendientesRes.data.content || []);
       const aprobados = Array.isArray(aprobadosRes.data) ? aprobadosRes.data : (aprobadosRes.data.content || []);
 
-      // Juntamos ambas listas y las mapeamos a la estructura de la UI
+
       const combinadas = [...pendientes, ...aprobados].map(n => ({
         id: n.id,
         nombre: n.nombre,
-        propietario: 'Propietario', // El backend actual no devuelve el nombre del dueño en este endpoint
+        propietario: 'Propietario',
         categoria: n.categoria,
         estatus: n.estatus === 'PENDIENTE' ? 'Pendiente' : 'Aprobado',
         coords: [n.latitud || 17.0754, n.longitud || -96.7236]
       }));
 
-      // Ordenamos para que los pendientes salgan hasta arriba
+   
       combinadas.sort((a, b) => (a.estatus === 'Pendiente' ? -1 : 1));
 
       setParadas(combinadas);
@@ -84,7 +83,7 @@ export default function AdminParadas() {
     fetchParadas();
   }, []);
 
-  // ✅ APROBAR NEGOCIO
+
   const handleApprove = async (id) => {
     try {
       await api.put(`/admin/negocios/${id}/aprobar`);
@@ -96,7 +95,7 @@ export default function AdminParadas() {
     }
   };
 
-  // 🗑️ RECHAZAR/ELIMINAR NEGOCIO
+
   const handleOpenDeleteModal = (id) => {
     setParadaAEliminar(id);
     setIsDeleteModalOpen(true);
@@ -114,7 +113,7 @@ export default function AdminParadas() {
     }
   };
 
-  // 📝 CREAR NUEVA PARADA DESDE EL ADMIN
+
   const handleCrearParada = async (e) => {
     e.preventDefault();
     if (!nuevoNombre) {
@@ -302,7 +301,6 @@ export default function AdminParadas() {
         </div>
       )}
 
-      {/* 🟢 MODAL PARA CREAR NUEVA PARADA CON MAPA INTERACTIVO */}
       {isNuevoModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-xl rounded-3xl shadow-2xl p-6 border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
@@ -369,7 +367,7 @@ export default function AdminParadas() {
         </div>
       )}
 
-      {/* 🔴 MODAL DE ELIMINACIÓN */}
+
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

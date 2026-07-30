@@ -1,0 +1,2 @@
+ALTER TABLE rutas
+MODIFY COLUMN fecha_salida DATE NOT NULL;

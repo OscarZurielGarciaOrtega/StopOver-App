@@ -1,0 +1,25 @@
+info:
+  name: Recomendaciones
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/paradas/recomendaciones?tipo=CAFETERIA&destino=oaxaca"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  params:
+    - name: tipo
+      value: CAFETERIA
+      type: query
+    - name: destino
+      value: oaxaca
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

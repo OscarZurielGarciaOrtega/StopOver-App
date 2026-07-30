@@ -30,18 +30,18 @@ export default function Recovery() {
     setMensajeExito('');
 
     try {
-      // 1. Mandamos la petición al backend de tu compa para generar el código y enviar el correo
+      
       await api.post('/auth/recuperar-password', { email });
 
-      // 2. Guardamos el correo en localStorage para que la siguiente pantalla sepa a quién actualizarle la pass
+   
       localStorage.setItem('reset_email', email);
 
       setMensajeExito('¡Código enviado con éxito!');
       
-      // 3. Redirigimos INMEDIATAMENTE a la pantalla de poner el código y la nueva contraseña
+   
       setTimeout(() => {
         navigate('/reset-password');
-      }, 1000); // 1 segundito nomás para que alcance a leer el éxito y salte de vista
+      }, 1000); 
 
     } catch (error) {
       console.error("Error al solicitar recuperación:", error);
@@ -56,13 +56,13 @@ export default function Recovery() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-[32px] shadow-lg flex flex-col md:flex-row w-full max-w-5xl overflow-hidden border border-gray-100">
         
-        {/* Lado Izquierdo - Ilustración */}
+     
         <div className="bg-[#B9CEB5] w-full md:w-5/12 p-10 flex flex-col items-center justify-center rounded-[32px]">
           <h1 className="text-4xl font-extrabold text-[#2A4532] mb-8">StopOver</h1>
           <img src={globe} alt="Ilustración StopOver" className="w-full max-w-[250px] object-contain drop-shadow-xl" />
         </div>
 
-        {/* Lado Derecho - Formulario */}
+  
         <div className="w-full md:w-7/12 p-8 md:p-16 flex flex-col justify-center bg-[#FAFAF8]">
           <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">¿Olvidaste tu contraseña?</h2>
           <p className="text-gray-500 font-medium mb-8 text-center">Te enviaremos un código de 6 dígitos a tu correo</p>

@@ -19,7 +19,6 @@ export default function Buscar() {
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
 
-  // 💖 GESTIÓN DE FAVORITOS EN LOCALSTORAGE
   const [favoritosIds, setFavoritosIds] = useState(() => {
     const guardados = localStorage.getItem('stopover_favoritos');
     if (guardados) {
@@ -48,7 +47,7 @@ export default function Buscar() {
     localStorage.setItem('stopover_favoritos', JSON.stringify(actualizados));
   };
 
-  // 🧰 SVGs para los iconos
+
   const iconMirador = <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z" />;
   const iconCafe = <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />;
   const iconPueblo = <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l7-3.5L19 21zM7 5h10v12.5l-5-2.5-5 2.5V5z" />;
@@ -247,7 +246,7 @@ export default function Buscar() {
                           </svg>
                         </div>
 
-                        {/* 💖 BOTÓN DE CORAZÓN */}
+                  
                         <button 
                           onClick={() => toggleFavoritoLugar(lugar)}
                           title={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}

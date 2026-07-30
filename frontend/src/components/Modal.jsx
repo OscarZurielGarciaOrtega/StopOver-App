@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function Modal({ isOpen, onClose, onConfirm, title, message }) {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
+
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });

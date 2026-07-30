@@ -17,7 +17,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
 
       const catBuscada = categoria.toLowerCase().trim();
 
-      // 1. Consultar negocios aprobados oficiales de la BD de PostgreSQL
+
       try {
         const resAprobados = await api.get('/negocios/aprobados').catch(() => ({ data: [] }));
         const negociosBack = Array.isArray(resAprobados.data) ? resAprobados.data : (resAprobados.data.content || []);
@@ -49,7 +49,6 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         console.warn("Error consultando negocios oficiales:", err);
       }
 
-      // 2. Consultar respaldo cartográfico (OpenStreetMap) para que coexistan ambos
       try {
         const destinoLimpio = destinoRuta ? destinoRuta.split(',')[0].trim() : 'Oaxaca';
         const resGeo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(destinoLimpio)}&count=1&language=es&format=json`);
@@ -89,10 +88,10 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         console.error("Error en mapa OpenStreetMap:", mapErr);
       }
 
-      // 3. COEXISTENCIA TOTAL: Primero los oficiales de Emma, luego los del mapa
+ 
       let listaFinal = [...listaOficiales, ...listaRespaldo];
 
-      // Si de plano no hay nada, metemos un respaldo de emergencia
+
       if (listaFinal.length === 0) {
         listaFinal = [
           {
@@ -117,7 +116,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
     cargarNegociosOficiales();
   }, [isOpen, categoria, destinoRuta]);
 
-  // FUNCIÓN OFICIAL PARA GUARDAR EN LA API
+
   const manejarAgregarParada = async (item) => {
     setGuardandoId(item.id);
 
@@ -148,7 +147,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
       <div className={`rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>
         
-        {/* Cabecera */}
+
         <div className={`p-6 flex justify-between items-center ${isDarkMode ? 'bg-[#1E3324] border-b border-gray-700 text-white' : 'bg-[#2A4532] text-white'}`}>
           <div>
             <span className="text-xs uppercase tracking-wider text-[#CBE3C7] font-bold">API PostgreSQL & Mapa ⚡</span>
@@ -160,7 +159,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl font-bold cursor-pointer">✕</button>
         </div>
 
-        {/* Lista */}
+
         <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
           {cargando ? (
             <div className={`text-center py-8 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -206,7 +205,6 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
           )}
         </div>
 
-        {/* Footer */}
         <div className={`p-4 border-t text-center transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
           <button 
             onClick={onClose}

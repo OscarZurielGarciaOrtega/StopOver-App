@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN estatus VARCHAR(20) NOT NULL DEFAULT 'Activo';

@@ -52,7 +52,7 @@ public class RutaController {
     
     @PostMapping
     public ResponseEntity<RutaResponse> crear(@Valid @RequestBody RutaRequest request, Authentication auth) {
-        // Authentication.getName() regresa el email que JwtAuthFilter guardó como "subject"
+        
         Usuario usuario = usuarioRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
 

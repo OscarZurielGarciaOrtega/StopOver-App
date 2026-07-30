@@ -143,37 +143,27 @@ public class AuthController {
 
 
 
-    // PASO 1 de recuperación: el usuario pide el código, se lo mandamos por SMS
     @PostMapping("/recuperar-password")
-    public ResponseEntity<?> recuperarPassword(
-            @Valid @RequestBody RecuperarPasswordRequest request) {
+public ResponseEntity<?> recuperarPassword(@Valid @RequestBody RecuperarPasswordRequest request) {
+    Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new NoSuchElementException("No existe una cuenta con ese email"));
+
+    String codigo = String.format("%06d", new Random().nextInt(999999));
+
+    usuario.setResetCode(codigo);
+    usuario.setResetCodeExpiracion(LocalDateTime.now().plusMinutes(15));
+    usuarioRepository.save(usuario);
+
+    emailService.enviarCorreo(
+            usuario.getEmail(),
+            "Recupera tu contraseña - StopOver",
+            "Tu código para recuperar tu contraseña es: " + codigo + ". Válido por 15 minutos."
+    );
+
+    return ResponseEntity.ok("Se envió un código de recuperación a tu correo");
+}
 
 
-        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> 
-                    new NoSuchElementException("No existe una cuenta con ese email"));
-
-
-
-        String codigo = String.format("%06d", new Random().nextInt(999999));
-
-
-        usuario.setResetCode(codigo);
-        usuario.setResetCodeExpiracion(LocalDateTime.now().plusMinutes(15));
-
-        usuarioRepository.save(usuario);
-
-
-
-        notificacionService.enviarSms(
-                usuario.getNumeroTelefono(),
-                "Tu código para recuperar tu contraseña en StopOver es: " 
-                + codigo + ". Válido por 15 minutos."
-        );
-
-
-        return ResponseEntity.ok("Se envió un código de recuperación por SMS");
-    }
 
 
 

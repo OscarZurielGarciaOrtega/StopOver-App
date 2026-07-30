@@ -15,6 +15,8 @@ public class NegocioRequest {
     private String descripcion;
     private String direccion;
 
+    private String imagenUrl;
+
     @NotNull(message = "La latitud es obligatoria")
     private BigDecimal latitud;
 
@@ -38,4 +40,7 @@ public class NegocioRequest {
 
     public BigDecimal getLongitud() { return longitud; }
     public void setLongitud(BigDecimal longitud) { this.longitud = longitud; }
+
+    public String getImagenUrl() { return imagenUrl; }
+public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 }

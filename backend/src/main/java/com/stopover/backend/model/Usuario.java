@@ -34,6 +34,9 @@ public class Usuario {
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
 
+    @Column(nullable = false)
+private String estatus = "Activo";
+
     public Usuario() {}
 
     public Long getId() { return id; }
@@ -59,4 +62,14 @@ public class Usuario {
 
     public LocalDateTime getResetCodeExpiracion() { return resetCodeExpiracion; }
     public void setResetCodeExpiracion(LocalDateTime resetCodeExpiracion) { this.resetCodeExpiracion = resetCodeExpiracion; }
+
+
+
+public String getEstatus() {
+    return estatus;
+}
+
+public void setEstatus(String estatus) {
+    this.estatus = estatus;
+}
 }

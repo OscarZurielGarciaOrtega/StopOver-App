@@ -47,9 +47,9 @@ public class NegocioController {
     }
 
     private NegocioResponse aResponse(Negocio n) {
-        return new NegocioResponse(n.getId(), n.getNombre(), n.getCategoria(), n.getDescripcion(),
-                n.getDireccion(), n.getLatitud(), n.getLongitud(), n.getEstatus());
-    }
+    return new NegocioResponse(n.getId(), n.getNombre(), n.getCategoria(), n.getDescripcion(),
+            n.getDireccion(), n.getLatitud(), n.getLongitud(), n.getEstatus(), n.getImagenUrl());
+}
 
     // Solo el rol PROPIETARIO registra su negocio (queda en PENDIENTE)
     @PreAuthorize("hasRole('PROPIETARIO')")
@@ -67,6 +67,7 @@ public class NegocioController {
         n.setLongitud(request.getLongitud());
         n.setEstatus("PENDIENTE");
         n.setPropietario(propietario);
+        n.setImagenUrl(request.getImagenUrl());
 
         Negocio guardado = negocioRepository.save(n);
         return ResponseEntity.ok(aResponse(guardado));

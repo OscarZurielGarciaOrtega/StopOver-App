@@ -20,6 +20,9 @@ public class Negocio {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
+    @Column(name = "imagen_url")
+private String imagenUrl;
+
     private String direccion;
 
     private BigDecimal latitud;
@@ -61,4 +64,7 @@ public class Negocio {
 
     public Usuario getPropietario() { return propietario; }
     public void setPropietario(Usuario propietario) { this.propietario = propietario; }
+
+    public String getImagenUrl() { return imagenUrl; }
+public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 }

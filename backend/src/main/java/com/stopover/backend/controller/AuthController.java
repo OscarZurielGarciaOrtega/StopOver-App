@@ -79,6 +79,25 @@ public class AuthController {
                 "— El equipo de StopOver"
         );
 
+        emailService.enviarCorreo(
+        usuario.getEmail(),
+        "¡Bienvenido de vuelta a StopOver! ",
+        "Hola " + usuario.getNombre() + ",\n\n" +
+        "Has iniciado sesión correctamente en StopOver.\n" +
+        "¡Que tengas un excelente viaje!\n\n" +
+        "Si no fuiste tú quien inició sesión, por favor contáctanos de inmediato.\n\n" +
+        "— El equipo de StopOver"
+);
+
+notificacionService.enviarWhatsapp(
+        usuario.getNumeroTelefono(),
+        "Hola " + usuario.getNombre() + ", detectamos un inicio de sesión en tu cuenta de StopOver."
+);
+
+notificacionService.enviarSms(
+        usuario.getNumeroTelefono(),
+        "StopOver: se ha iniciado sesión en tu cuenta. Si no fuiste tú, contáctanos."
+);
 
         return ResponseEntity.ok(
                 new LoginResponse(

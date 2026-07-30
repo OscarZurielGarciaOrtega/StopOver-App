@@ -28,12 +28,30 @@ public class NotificacionService {
     }
 
     public void enviarSms(String numeroDestino, String mensaje) {
-        Message.creator(
-                new PhoneNumber(numeroDestino),
-                new PhoneNumber(numeroSms),
-                mensaje
-        ).create();
+
+    if (numeroDestino == null || numeroDestino.trim().isEmpty()) {
+        System.err.println("Número vacío");
+        return;
     }
+
+    String destino = numeroDestino.trim();
+
+    if (!destino.startsWith("+")) {
+        destino = "+52" + destino;
+    }
+
+    System.out.println("==================================");
+    System.out.println("Enviando SMS");
+    System.out.println("Destino: " + destino);
+    System.out.println("Origen : " + numeroSms);
+    System.out.println("==================================");
+
+    Message.creator(
+            new PhoneNumber(destino),
+            new PhoneNumber(numeroSms),
+            mensaje
+    ).create();
+}
 
    public void enviarWhatsapp(String numeroDestino, String mensaje) {
     String numeroFormateadoWhatsapp = formatearParaWhatsapp(numeroDestino);

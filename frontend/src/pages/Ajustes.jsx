@@ -2,29 +2,24 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 
 export default function Ajustes() {
-  // 1. Cargar el avatar o usar uno por defecto guardado
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
-  });
-  
-  // 2. Cargar el estado del Modo Oscuro desde localStorage
+  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 3. Cargar el nombre y correo
+  // 👤 CARGAR NOMBRE Y CORREO DESDE LOCALSTORAGE
   const [nombre, setNombre] = useState(() => {
-    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+    return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Maria A';
   });
   const [correo, setCorreo] = useState(() => {
-    return localStorage.getItem('stopover_user_correo') || 'MariaA@gmail.com';
+    return localStorage.getItem('email') || localStorage.getItem('stopover_user_correo') || 'kopleskanon@gmail.com';
   });
 
   // Estados para contraseñas
   const [passwordActual, setPasswordActual] = useState('');
   const [passwordNueva, setPasswordNueva] = useState('');
 
-  // 🔔 ESTADOS PARA NUESTRO MODAL DE ALERTAS PERSONALIZADO
+  // 🔔 ESTADOS PARA EL MODAL DE ALERTAS
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertIsError, setAlertIsError] = useState(false);
@@ -35,30 +30,14 @@ export default function Ajustes() {
     setAlertModalOpen(true);
   };
 
-  // Escuchar cambios de perfil desde otras pestañas (por si acaso)
   useEffect(() => {
     const handleProfileChange = () => {
-      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
-      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+      setNombre(localStorage.getItem('nombre') || localStorage.getItem('email') || 'Maria A');
+      setCorreo(localStorage.getItem('email') || localStorage.getItem('stopover_user_correo') || 'kopleskanon@gmail.com');
     };
     window.addEventListener('user_profile_updated', handleProfileChange);
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
-
-  // 🛠️ SOLUCIÓN A LA IMAGEN ROTA: Leer como Base64 para que sea permanente
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setAvatar(base64String);
-        localStorage.setItem('stopover_user_avatar', base64String);
-        window.dispatchEvent(new Event('user_profile_updated'));
-      };
-      reader.readAsDataURL(file); // Convierte la imagen a texto permanente
-    }
-  };
 
   // Función para alternar modo oscuro
   const toggleDarkMode = () => {
@@ -68,23 +47,23 @@ export default function Ajustes() {
     window.dispatchEvent(new Event('storage_updated'));
   };
 
-  // Guardar perfil usando el nuevo Modal
+  // Guardar perfil
   const handleGuardarPerfil = (e) => {
     e.preventDefault();
-    localStorage.setItem('stopover_user_nombre', nombre);
-    localStorage.setItem('stopover_user_correo', correo);
+    localStorage.setItem('nombre', nombre);
+    localStorage.setItem('email', correo);
     window.dispatchEvent(new Event('user_profile_updated'));
     mostrarAlerta('¡Perfil y configuración guardados con éxito en el sistema!');
   };
 
-  // Actualizar contraseña usando el nuevo Modal
+  // Actualizar contraseña
   const handleActualizarPassword = (e) => {
     e.preventDefault();
-    if (!passwordNueva) {
-      mostrarAlerta('Por favor escribe tu nueva contraseña antes de actualizar.', true);
+    if (!passwordNueva || !passwordActual) {
+      mostrarAlerta('Por favor escribe tu contraseña actual y la nueva antes de actualizar.', true);
       return;
     }
-    mostrarAlerta('¡Tu contraseña ha sido actualizada correctamente!');
+    mostrarAlerta('¡Tu contraseña ha sido actualizada correctamente en el sistema!');
     setPasswordActual('');
     setPasswordNueva('');
   };
@@ -92,7 +71,7 @@ export default function Ajustes() {
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
-      {/* Header */}
+      {/* Header con inicial idéntica */}
       <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -101,13 +80,14 @@ export default function Ajustes() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
-          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
+          <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {correo.charAt(0).toUpperCase()}
+          </div>
+          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{correo}</span>
         </div>
       </header>
 
       <div className="flex flex-1">
-        
         <Sidebar />
 
         <main className={`flex-1 p-10 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -124,21 +104,14 @@ export default function Ajustes() {
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Perfil</h3>
               
               <div className="flex items-center gap-6 mt-6 mb-6">
-                <img src={avatar} alt="Perfil" className="w-16 h-16 rounded-full border border-gray-200 shadow-sm object-cover bg-white" />
-                
-                <input 
-                  type="file" 
-                  id="upload-avatar" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageChange}
-                />
-                <label 
-                  htmlFor="upload-avatar" 
-                  className="bg-[#567E64] hover:bg-[#43644F] text-white text-sm font-semibold px-6 py-2 rounded-lg transition-colors cursor-pointer shadow-sm"
-                >
-                  Cambiar foto
-                </label>
+                {/* Círculo con la inicial en lugar de foto genérica */}
+                <div className="w-16 h-16 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-2xl shadow-md border-2 border-gray-300">
+                  {correo.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{nombre}</p>
+                  <p className="text-xs text-gray-400">{correo}</p>
+                </div>
               </div>
 
               <div className="mb-4">
@@ -184,7 +157,6 @@ export default function Ajustes() {
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Preferencias</h3>
               
               <div className="flex flex-col gap-5 mt-6">
-                {/* SWITCH INTERACTIVO PARA EL MODO OSCURO */}
                 <div 
                   className="flex items-center gap-4 cursor-pointer select-none"
                   onClick={toggleDarkMode}
@@ -254,7 +226,7 @@ export default function Ajustes() {
         </main>
       </div>
 
-      {/* 🟢 MODAL DE ALERTAS PERSONALIZADO */}
+      {/* MODAL DE ALERTAS */}
       {alertModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
           <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-100 text-gray-800'}`}>

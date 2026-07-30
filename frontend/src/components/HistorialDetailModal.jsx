@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
 
-export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
+export default function HistorialDetailModal({ isOpen, onClose, rutaInfo }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
-  const [rutaInfo, setRutaInfo] = useState(null);
 
   // Estados para el sistema de reseñas y estrellas
   const [estrellas, setEstrellas] = useState(5);
@@ -12,25 +9,18 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
   const [enviado, setEnviado] = useState(false);
 
   useEffect(() => {
-    if (isOpen && rutaId) {
-      const guardadas = localStorage.getItem('stopover_rutas_reales');
-      if (guardadas) {
-        const rutasArray = JSON.parse(guardadas);
-        const encontrada = rutasArray.find(r => r.id === rutaId);
-        setRutaInfo(encontrada);
-      }
-      // Reiniciar estado de reseña al abrir un modal nuevo
+    if (isOpen) {
       setEnviado(false);
       setComentario('');
       setEstrellas(5);
     }
-  }, [isOpen, rutaId]);
+  }, [isOpen, rutaInfo]);
 
   if (!isOpen || !rutaInfo) return null;
 
   // 🧮 Lógica para separar las paradas visitadas
   let paradas = [];
-  if (rutaInfo.escala && !rutaInfo.escala.includes('Directo')) {
+  if (rutaInfo.escala && !rutaInfo.escala.includes('Directo') && !rutaInfo.escala.includes('Por definir')) {
     paradas = rutaInfo.escala.split(',').map(p => p.trim());
   }
 
@@ -63,7 +53,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
           <button onClick={onClose} className={`text-xl font-bold cursor-pointer transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}>✕</button>
         </div>
 
-        {/* Body (Con scroll interno por si se extiende con la reseña) */}
+        {/* Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           
           {/* Recorrido */}
@@ -75,11 +65,11 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
             </div>
           </div>
 
-          {/* Duración */}
+          {/* Fecha / Duración */}
           <div className="flex gap-4">
             <div className="mt-1 text-purple-500 text-xl">⏱️</div>
             <div>
-              <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Tiempo total en camino:</h4>
+              <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Fecha de salida:</h4>
               <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{rutaInfo.duracion}</p>
             </div>
           </div>
@@ -108,7 +98,6 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
               ) : (
                 paradas.map((parada, index) => (
                   <div key={index} className="relative">
-                    {/* Puntito en la línea del tiempo */}
                     <div className={`absolute -left-[33px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 ${isDarkMode ? 'bg-gray-800 border-blue-500' : 'bg-white border-blue-400'}`}></div>
                     
                     <div className={`p-4 rounded-2xl border transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-[#FAF9F6] border-gray-100'}`}>
@@ -126,7 +115,7 @@ export default function HistorialDetailModal({ isOpen, onClose, rutaId }) {
             </div>
           </div>
 
-          {/* 🌟 SECCIÓN DE VALORACIÓN Y RESEÑA PARA EL PROPIETARIO */}
+          {/* Valoración y Reseña */}
           <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`text-sm font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>🌟 Valora tu experiencia</h4>
             

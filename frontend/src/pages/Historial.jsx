@@ -25,7 +25,8 @@ export default function Historial() {
   const [rutaAEliminar, setRutaAEliminar] = useState(null);
   const [idRutaRealEliminar, setIdRutaRealEliminar] = useState(null);
 
-  const [rutaSeleccionadaId, setRutaSeleccionadaId] = useState(null);
+  // Estados para el modal de detalle con el objeto completo de la ruta
+  const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [rutas, setRutas] = useState([]);
@@ -84,8 +85,8 @@ export default function Historial() {
 
   const getStatusClass = (estatus) => {
     switch (estatus) {
-      case 'En Tránsito': return 'bg-green-100 text-green-700';
-      case 'Completado': return 'bg-blue-100 text-blue-700';
+      case 'En Tránsito': return 'bg-emerald-100 text-emerald-700 font-bold';
+      case 'Completado': return 'bg-blue-100 text-blue-700 font-bold';
       case 'Programado': return 'bg-purple-100 text-purple-700';
       case 'Retrasado': return 'bg-red-100 text-red-700';
       case 'Cancelado': return 'bg-gray-200 text-gray-700';
@@ -149,6 +150,7 @@ export default function Historial() {
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
+      {/* HEADER CON INICIAL IGUAL AL DASHBOARD */}
       <header className={`flex items-center justify-between px-8 py-4 border-b transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-[#FAF9F6] border-gray-200'}`}>
         <div className="flex items-center gap-2 text-[#2A4532]">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -242,9 +244,10 @@ export default function Historial() {
                         <td className="py-4 px-2"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>{ruta.estatus}</span></td>
                         <td className="py-4 px-2 flex items-center gap-3">
                           
+                          {/* BOTÓN CONECTADO PARA ABRIR DETAIL MODAL */}
                           <button 
                             onClick={() => {
-                              setRutaSeleccionadaId(ruta.id);
+                              setRutaSeleccionada(ruta);
                               setIsDetailModalOpen(true);
                             }}
                             className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
@@ -295,10 +298,11 @@ export default function Historial() {
         message={`Estás a punto de borrar la ruta ${rutaAEliminar}. Esta acción no se puede deshacer y se perderá del registro de PostgreSQL.`}
       />
 
+      {/* DETAIL MODAL CONECTADO */}
       <HistorialDetailModal 
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
-        rutaId={rutaSeleccionadaId}
+        rutaInfo={rutaSeleccionada}
       />
 
     </div>

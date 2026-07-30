@@ -1,99 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import api from '../api/axios'; 
 
 export default function Buscar() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
-  });
   const [nombre, setNombre] = useState(() => {
-    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+    return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero';
   });
 
-  // 🔔 ESCUCHAR EN TIEMPO REAL SI EL USUARIO CAMBIA SU FOTO O NOMBRE EN AJUSTES
   useEffect(() => {
     const handleProfileChange = () => {
-      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
-      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+      setNombre(localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero');
     };
     window.addEventListener('user_profile_updated', handleProfileChange);
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
 
-  // Lista robusta de lugares para simular la búsqueda y filtrado
-  const [todosLosLugares] = useState([
+  // 💖 GESTIÓN DE FAVORITOS EN LOCALSTORAGE
+  const [favoritosIds, setFavoritosIds] = useState(() => {
+    const guardados = localStorage.getItem('stopover_favoritos');
+    if (guardados) {
+      try {
+        const parsed = JSON.parse(guardados);
+        return parsed.map(f => f.id);
+      } catch (e) {
+        console.error("Error al leer favoritos", e);
+      }
+    }
+    return [];
+  });
+
+  const toggleFavoritoLugar = (lugar) => {
+    const guardados = JSON.parse(localStorage.getItem('stopover_favoritos') || '[]');
+    const existe = guardados.some(f => f.id === lugar.id);
+
+    let actualizados;
+    if (existe) {
+      actualizados = guardados.filter(f => f.id !== lugar.id);
+      setFavoritosIds(favoritosIds.filter(id => id !== lugar.id));
+    } else {
+      actualizados = [lugar, ...guardados];
+      setFavoritosIds([...favoritosIds, lugar.id]);
+    }
+    localStorage.setItem('stopover_favoritos', JSON.stringify(actualizados));
+  };
+
+  // 🧰 SVGs para los iconos
+  const iconMirador = <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z" />;
+  const iconCafe = <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />;
+  const iconPueblo = <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l7-3.5L19 21zM7 5h10v12.5l-5-2.5-5 2.5V5z" />;
+  const iconRestaurante = <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />;
+
+  const datosSimulados = [
     { 
-      id: 1, 
-      title: 'Cuatro Palos', 
-      route: 'Oaxaca → Querétaro', 
-      category: 'Miradores', 
-      catColor: 'text-[#E11D48]', 
-      iconBg: 'bg-[#E11D48]/80',
-      img: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&q=80',
-      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+      id: 'sim-1', title: 'Cuatro Palos', route: 'Oaxaca → Querétaro', category: 'Miradores', 
+      catColor: 'text-[#E11D48]', iconBg: 'bg-[#E11D48]/80',
+      img: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&q=80', icon: iconMirador
     },
     { 
-      id: 2, 
-      title: 'ZICATELA', 
-      route: 'Oaxaca → Río Grande', 
-      category: 'Playa', 
-      catColor: 'text-[#0891B2]', 
-      iconBg: 'bg-[#0891B2]/80',
+      id: 'sim-2', title: 'ZICATELA', route: 'Oaxaca → Río Grande', category: 'Playa', 
+      catColor: 'text-[#0891B2]', iconBg: 'bg-[#0891B2]/80',
       img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&q=80',
       icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
     },
     { 
-      id: 3, 
-      title: '20 DE NOVIEMBRE', 
-      route: 'Juquila → Oaxaca', 
-      category: 'Mercado', 
-      catColor: 'text-[#65A30D]', 
-      iconBg: 'bg-[#65A30D]/80',
-      img: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80',
-      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+      id: 'sim-3', title: '20 DE NOVIEMBRE', route: 'Juquila → Oaxaca', category: 'Mercado', 
+      catColor: 'text-[#65A30D]', iconBg: 'bg-[#65A30D]/80',
+      img: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80', icon: iconRestaurante
     },
     { 
-      id: 4, 
-      title: 'CAFÉ DE OLLA EL TULE', 
-      route: 'Oaxaca → Mitla', 
-      category: 'Cafeterías', 
-      catColor: 'text-[#92400E]', 
-      iconBg: 'bg-[#92400E]/80',
-      img: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80',
-      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      id: 'sim-4', title: 'CAFÉ DE OLLA EL TULE', route: 'Oaxaca → Mitla', category: 'Cafeterías', 
+      catColor: 'text-[#92400E]', iconBg: 'bg-[#92400E]/80',
+      img: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80', icon: iconCafe
     },
     { 
-      id: 5, 
-      title: 'PUEBLO MÁGICO SOLA DE VEGA', 
-      route: 'Oaxaca → Puerto Escondido', 
-      category: 'Pueblos mágicos', 
-      catColor: 'text-[#0284C7]', 
-      iconBg: 'bg-[#0284C7]/80',
-      img: 'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?w=500&q=80',
-      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l7-3.5L19 21zM7 5h10v12.5l-5-2.5-5 2.5V5z" />
-    },
-    { 
-      id: 6, 
-      title: 'CAPULÁLPAM DE MÉNDEZ', 
-      route: 'Oaxaca → Sierra Norte', 
-      category: 'Pueblos mágicos', 
-      catColor: 'text-[#0284C7]', 
-      iconBg: 'bg-[#0284C7]/80',
-      img: 'https://images.unsplash.com/photo-1564564264624-9b5a1bb40f8e?w=500&q=80',
-      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l7-3.5L19 21zM7 5h10v12.5l-5-2.5-5 2.5V5z" />
+      id: 'sim-5', title: 'PUEBLO MÁGICO SOLA DE VEGA', route: 'Oaxaca → Puerto Escondido', category: 'Pueblos mágicos', 
+      catColor: 'text-[#0284C7]', iconBg: 'bg-[#0284C7]/80',
+      img: 'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?w=500&q=80', icon: iconPueblo
     }
-  ]);
+  ];
 
-  // Estados para búsqueda de texto y categoría seleccionada
+  const [todosLosLugares, setTodosLosLugares] = useState(datosSimulados);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargarNegociosReales = async () => {
+      try {
+        const response = await api.get('/negocios/aprobados');
+        const negociosBack = Array.isArray(response.data) ? response.data : [];
+
+        const negociosMapeados = negociosBack.map(negocio => {
+          const cat = negocio.categoria ? negocio.categoria.toUpperCase() : 'OTRO';
+          let category = 'Restaurantes';
+          let catColor = 'text-[#65A30D]';
+          let iconBg = 'bg-[#65A30D]/80';
+          let img = 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80';
+          let icon = iconRestaurante;
+
+          if (cat === 'CAFETERIA' || cat === 'CAFETERÍAS') {
+            category = 'Cafeterías';
+            catColor = 'text-[#92400E]'; iconBg = 'bg-[#92400E]/80';
+            img = 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80';
+            icon = iconCafe;
+          } else if (cat === 'MIRADOR' || cat === 'MIRADORES') {
+            category = 'Miradores';
+            catColor = 'text-[#E11D48]'; iconBg = 'bg-[#E11D48]/80';
+            img = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&q=80';
+            icon = iconMirador;
+          } else if (cat === 'PUEBLO_MAGICO' || cat === 'PUEBLOS MÁGICOS') {
+            category = 'Pueblos mágicos';
+            catColor = 'text-[#0284C7]'; iconBg = 'bg-[#0284C7]/80';
+            img = 'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?w=500&q=80';
+            icon = iconPueblo;
+          }
+
+          return {
+            id: `api-${negocio.id}`,
+            title: negocio.nombre,
+            route: negocio.direccion || 'Ubicación registrada',
+            category: category,
+            catColor: catColor,
+            iconBg: iconBg,
+            img: img,
+            icon: icon
+          };
+        });
+
+        setTodosLosLugares([...negociosMapeados, ...datosSimulados]);
+      } catch (error) {
+        console.error("Error al cargar negocios de la API:", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarNegociosReales();
+  }, []);
+
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
 
-  // Lógica de filtrado combinada (Texto + Categoría)
   const resultadosFiltrados = todosLosLugares.filter(lugar => {
     const textoMatch = 
       lugar.title.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
@@ -116,14 +165,14 @@ export default function Buscar() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          {/* FOTO Y NOMBRE DE PERFIL DINÁMICOS */}
-          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
+          <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {nombre.charAt(0).toUpperCase()}
+          </div>
           <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
 
       <div className="flex flex-1">
-    
         <Sidebar />
 
         <main className={`flex-1 p-10 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -133,7 +182,6 @@ export default function Buscar() {
             <p className="text-[15px] text-gray-400 font-medium mt-1">Busca destinos, rutas o lugares de interés</p>
           </div>
 
-          {/* BARRA DE BÚSQUEDA INTERACTIVA */}
           <div className="relative w-full max-w-4xl mb-6">
             <input 
               type="text" 
@@ -153,7 +201,6 @@ export default function Buscar() {
             </div>
           </div>
 
-          {/* BOTONES DE FILTRADO POR CATEGORÍA */}
           <div className="flex flex-wrap gap-3 mb-12">
             {['Todos', 'Cafeterías', 'Miradores', 'Pueblos mágicos', 'Restaurantes'].map((cat) => (
               <button 
@@ -173,7 +220,9 @@ export default function Buscar() {
           </div>
 
           <div className="mb-6">
-            <p className="text-gray-400 font-semibold mb-6">{resultadosFiltrados.length} resultados encontrados</p>
+            <p className="text-gray-400 font-semibold mb-6">
+              {cargando ? 'Sincronizando con la base de datos...' : `${resultadosFiltrados.length} resultados encontrados`}
+            </p>
             
             {resultadosFiltrados.length === 0 ? (
               <div className="text-center py-16 text-gray-400 font-medium">
@@ -181,28 +230,42 @@ export default function Buscar() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {resultadosFiltrados.map((lugar) => (
-                  <div key={lugar.id} className={`rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border flex flex-col overflow-hidden hover:-translate-y-1 transition-transform duration-300 cursor-pointer ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-                    
-                    <div className="relative h-44 w-full">
-                      <img src={lugar.img} alt={lugar.title} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                {resultadosFiltrados.map((lugar) => {
+                  const esFavorito = favoritosIds.includes(lugar.id);
+                  return (
+                    <div key={lugar.id} className={`rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border flex flex-col overflow-hidden hover:-translate-y-1 transition-transform duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
                       
-                      <div className={`absolute top-3 left-3 ${lugar.iconBg} text-white p-2 rounded-full backdrop-blur-sm shadow-md`}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          {lugar.icon}
-                        </svg>
+                      <div className="relative h-44 w-full">
+                        <img src={lugar.img} alt={lugar.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                        
+                        <div className={`absolute top-3 left-3 ${lugar.iconBg} text-white p-2 rounded-full backdrop-blur-sm shadow-md`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            {lugar.icon}
+                          </svg>
+                        </div>
+
+                        {/* 💖 BOTÓN DE CORAZÓN PARA AGREGAR/QUITAR DE FAVORITOS */}
+                        <button 
+                          onClick={() => toggleFavoritoLugar(lugar)}
+                          title={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+                          className="absolute top-3 right-3 bg-white/70 hover:bg-white text-red-500 transition-colors p-2 rounded-full backdrop-blur-md cursor-pointer shadow-sm"
+                        >
+                          <svg className={`w-5 h-5 ${esFavorito ? 'fill-red-500 text-red-500' : 'fill-none text-gray-700 stroke-2'}`} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                          </svg>
+                        </button>
                       </div>
-                    </div>
 
-                    <div className="p-5 flex flex-col items-center text-center">
-                      <h3 className={`text-lg font-black tracking-wide uppercase mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{lugar.title}</h3>
-                      <p className="text-xs text-gray-400 font-medium mb-1">{lugar.route}</p>
-                      <span className={`text-[11px] font-bold ${lugar.catColor}`}>{lugar.category}</span>
-                    </div>
+                      <div className="p-5 flex flex-col items-center text-center">
+                        <h3 className={`text-lg font-black tracking-wide uppercase mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{lugar.title}</h3>
+                        <p className="text-xs text-gray-400 font-medium mb-1 line-clamp-1">{lugar.route}</p>
+                        <span className={`text-[11px] font-bold ${lugar.catColor}`}>{lugar.category}</span>
+                      </div>
 
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

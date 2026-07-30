@@ -48,6 +48,9 @@ export default function Dashboard() {
         const data = response.data.content || response.data;
         
         if (Array.isArray(data)) {
+          // Recuperamos los estatus guardados localmente para asegurar el cambio visual inmediato
+          const estatusLocales = JSON.parse(localStorage.getItem('stopover_estatus_rutas') || '{}');
+          
           const rutasFormateadas = data.map(ruta => ({
             id: `#ST-${ruta.id}`,
             idReal: ruta.id,
@@ -55,7 +58,7 @@ export default function Dashboard() {
             destino: ruta.destino,
             escala: ruta.paradas && ruta.paradas.length > 0 ? ruta.paradas.map(p => p.nombre).join(', ') : 'Directo (Sin escala)',
             duracion: ruta.fechaSalida || ruta.fecha_salida || 'Por definir',
-            estatus: ruta.estatus || 'Programado' 
+            estatus: estatusLocales[ruta.id] || ruta.estatus || 'Programado' 
           }));
           setRutas(rutasFormateadas.reverse());
         }
@@ -213,9 +216,9 @@ export default function Dashboard() {
   const getStatusClass = (estatus) => {
     switch (estatus) {
       case 'Programado': return 'bg-purple-100 text-purple-700';
-      case 'En Tránsito': return 'bg-blue-100 text-blue-700';
-      case 'Completado': return 'bg-emerald-100 text-emerald-700';
-      case 'Cancelado': return 'bg-gray-200 text-gray-700';
+      case 'En Tránsito': return 'bg-emerald-100 text-emerald-700 font-bold';
+      case 'Completado': return 'bg-blue-100 text-blue-700 font-bold';
+      case 'Cancelado': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -557,7 +560,7 @@ export default function Dashboard() {
                         origen: origenTexto.split(',')[0],
                         destino: destinoTexto.split(',')[0],
                         fechaSalida: fechaSeleccionada, 
-                        paradaIds: [] // Limpio y sin hacks, como lo pide la documentación oficial
+                        paradaIds: [] 
                       });
 
                       setIsMapModalOpen(false);

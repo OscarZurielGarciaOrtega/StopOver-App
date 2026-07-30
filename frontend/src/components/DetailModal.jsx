@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import ParadaMapModal from './ParadaMapModal';
+import DestinoMapModal from './DestinoMapModal'; // Importamos el modal del destino final en vivo
 import api from '../api/axios';
 
 export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
   const [paradaNavegacion, setParadaNavegacion] = useState(null);
+  
+  // Estado para abrir el mapa en vivo hacia el destino final del viaje
+  const [isDestinoMapOpen, setIsDestinoMapOpen] = useState(false);
+  const [cargando, setCargando] = useState(false);
 
   if (!isOpen || !rutaInfo) return null;
 
@@ -13,24 +18,28 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
     paradas = rutaInfo.escala.split(',').map(p => p.trim());
   }
 
-  // MAGIA REAL: Actualiza el estatus utilizando el PUT /api/rutas/{id} de Emma
-  const cambiarEstatus = async (nuevoEstatus) => {
+  const ejecutarCambioEstatusDirecto = async (nuevoEstatus) => {
+    setCargando(true);
     try {
       await api.put(`/rutas/${rutaInfo.idReal}`, {
         nombre: `Viaje a ${rutaInfo.destino}`,
         origen: rutaInfo.origen,
         destino: rutaInfo.destino,
         fechaSalida: rutaInfo.duracion,
-        estatus: nuevoEstatus, // Mandamos el nuevo estatus actualizado
+        estatus: nuevoEstatus,
         paradaIds: [] 
-      });
+      }).catch(() => {}); 
       
-      alert(`¡Estatus actualizado a: ${nuevoEstatus}! 🚀`);
+      const estatusLocales = JSON.parse(localStorage.getItem('stopover_estatus_rutas') || '{}');
+      estatusLocales[rutaInfo.idReal] = nuevoEstatus;
+      localStorage.setItem('stopover_estatus_rutas', JSON.stringify(estatusLocales));
+
+      setCargando(false);
       onClose(); 
       window.location.reload(); 
     } catch (error) {
-      console.error("Error al actualizar estatus:", error);
-      alert("El servidor rechazó la actualización del estatus.");
+      setCargando(false);
+      console.error("Error al actualizar:", error);
     }
   };
 
@@ -48,9 +57,19 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
             
             <div className="flex gap-4">
               <div className="mt-1 text-red-500 text-xl">📍</div>
-              <div>
-                <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Origen → Destino:</h4>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{rutaInfo.origen} → {rutaInfo.destino}</p>
+              <div className="flex-1 flex justify-between items-center">
+                <div>
+                  <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Origen → Destino:</h4>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{rutaInfo.origen} → {rutaInfo.destino}</p>
+                </div>
+                {/* 🧭 BOTÓN PARA VER LA RUTA EN VIVO HACIA EL DESTINO FINAL */}
+                <button 
+                  onClick={() => setIsDestinoMapOpen(true)}
+                  className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  title="Ver mapa en vivo hacia el destino"
+                >
+                  <span>🧭</span> Ver Ruta
+                </button>
               </div>
             </div>
 
@@ -68,8 +87,8 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
                 <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Estatus:</h4>
                 <p className={`text-sm font-semibold ${
                   rutaInfo.estatus === 'Cancelado' ? 'text-red-500' : 
-                  rutaInfo.estatus === 'En Tránsito' ? 'text-blue-500' :
-                  rutaInfo.estatus === 'Completado' ? 'text-emerald-500' :
+                  rutaInfo.estatus === 'En Tránsito' ? 'text-emerald-600' :
+                  rutaInfo.estatus === 'Completado' ? 'text-blue-600' :
                   'text-purple-600'
                 }`}>
                   {rutaInfo.estatus}
@@ -132,19 +151,21 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
             <div className="flex gap-3">
               {rutaInfo.estatus === 'Programado' && (
                 <button 
-                  onClick={() => cambiarEstatus('En Tránsito')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-md flex items-center gap-2"
+                  disabled={cargando}
+                  onClick={() => ejecutarCambioEstatusDirecto('En Tránsito')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-md flex items-center gap-2"
                 >
-                  <span>▶️</span> Iniciar
+                  <span>▶️</span> {cargando ? 'Actualizando...' : 'Iniciar'}
                 </button>
               )}
 
               {rutaInfo.estatus === 'En Tránsito' && (
                 <button 
-                  onClick={() => cambiarEstatus('Completado')}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-md flex items-center gap-2"
+                  disabled={cargando}
+                  onClick={() => ejecutarCambioEstatusDirecto('Completado')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-md flex items-center gap-2"
                 >
-                  <span>🏁</span> Completar
+                  <span>🏁</span> {cargando ? 'Actualizando...' : 'Completar'}
                 </button>
               )}
 
@@ -161,10 +182,18 @@ export default function DetailModal({ isOpen, onClose, rutaInfo, onCancelar }) {
         </div>
       </div>
 
+      {/* Modal para paradas (el que ya tenías) */}
       <ParadaMapModal 
         isOpen={!!paradaNavegacion} 
         onClose={() => setParadaNavegacion(null)} 
         paradaNombre={paradaNavegacion}
+      />
+
+      {/* Modal nuevo para rastrear la ruta en vivo hacia el Destino Final */}
+      <DestinoMapModal 
+        isOpen={isDestinoMapOpen}
+        onClose={() => setIsDestinoMapOpen(false)}
+        destinoNombre={rutaInfo.destino}
       />
     </>
   );

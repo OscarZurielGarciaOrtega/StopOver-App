@@ -13,6 +13,10 @@ public class RegistroRequest {
     @Email(message = "El formato del email no es válido")
     private String email;
 
+    @NotBlank(message = "El teléfono es obligatorio")
+private String telefono;
+
+
     // Mínimo 8 caracteres, una mayúscula, un número y un carácter especial 
     @NotBlank(message = "La contraseña es obligatoria")
     @Pattern(
@@ -29,4 +33,12 @@ public class RegistroRequest {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getTelefono() {
+    return telefono;
+}
+
+public void setTelefono(String telefono) {
+    this.telefono = telefono;
+}
 }

@@ -1,5 +1,6 @@
 package com.stopover.backend.model;
 
+import java.time.LocalDateTime;
 import jakarta.persistence.*;
 
 @Entity
@@ -20,7 +21,15 @@ public class Usuario {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    
+    @Column(name = "numero_telefono")
+    private String numeroTelefono;
+
+    @Column(name = "reset_code")
+    private String resetCode;
+
+    @Column(name = "reset_code_expiracion")
+    private LocalDateTime resetCodeExpiracion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
@@ -41,4 +50,13 @@ public class Usuario {
 
     public Rol getRol() { return rol; }
     public void setRol(Rol rol) { this.rol = rol; }
+
+    public String getNumeroTelefono() { return numeroTelefono; }
+    public void setNumeroTelefono(String numeroTelefono) { this.numeroTelefono = numeroTelefono; }
+
+    public String getResetCode() { return resetCode; }
+    public void setResetCode(String resetCode) { this.resetCode = resetCode; }
+
+    public LocalDateTime getResetCodeExpiracion() { return resetCodeExpiracion; }
+    public void setResetCodeExpiracion(LocalDateTime resetCodeExpiracion) { this.resetCodeExpiracion = resetCodeExpiracion; }
 }

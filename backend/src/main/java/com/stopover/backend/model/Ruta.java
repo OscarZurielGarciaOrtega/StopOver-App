@@ -1,6 +1,8 @@
 package com.stopover.backend.model;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,7 +25,7 @@ public class Ruta {
     private String destino;
 
     @Column(name = "fecha_salida", nullable = false)
-    private LocalDateTime fechaSalida;
+    private LocalDate fechaSalida;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
@@ -52,8 +54,13 @@ public class Ruta {
     public String getDestino() { return destino; }
     public void setDestino(String destino) { this.destino = destino; }
 
-    public LocalDateTime getFechaSalida() { return fechaSalida; }
-    public void setFechaSalida(LocalDateTime fechaSalida) { this.fechaSalida = fechaSalida; }
+    public LocalDate getFechaSalida() { 
+    return fechaSalida; 
+}
+
+public void setFechaSalida(LocalDate fechaSalida) { 
+    this.fechaSalida = fechaSalida; 
+}
 
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }

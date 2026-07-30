@@ -56,7 +56,11 @@ public class RutaController {
         Usuario usuario = usuarioRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
 
-        Set<Parada> paradas = new HashSet<>(paradaRepository.findAllById(request.getParadaIds()));
+        Set<Parada> paradas = new HashSet<>();
+
+if (request.getParadaIds() != null && !request.getParadaIds().isEmpty()) {
+    paradas = new HashSet<>(paradaRepository.findAllById(request.getParadaIds()));
+}
 
         Ruta ruta = new Ruta();
         ruta.setNombre(request.getNombre());
@@ -96,7 +100,11 @@ public class RutaController {
         Ruta ruta = rutaRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Ruta no encontrada"));
 
-        Set<Parada> paradas = new HashSet<>(paradaRepository.findAllById(request.getParadaIds()));
+        Set<Parada> paradas = new HashSet<>();
+
+if (request.getParadaIds() != null && !request.getParadaIds().isEmpty()) {
+    paradas = new HashSet<>(paradaRepository.findAllById(request.getParadaIds()));
+}
 
         ruta.setNombre(request.getNombre());
         ruta.setOrigen(request.getOrigen());

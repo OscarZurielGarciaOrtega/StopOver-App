@@ -45,7 +45,7 @@ public class NotificacionService {
 }
 
 private String formatearParaWhatsapp(String numero) {
-    // Si es número mexicano (+52) y no tiene ya el 1, se lo insertamos
+    
     if (numero.startsWith("+52") && !numero.startsWith("+521")) {
         return "+521" + numero.substring(3);
     }

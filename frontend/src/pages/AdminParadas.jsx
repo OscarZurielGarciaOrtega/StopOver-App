@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import api from '../api/axios'; // 🚀 Importamos la conexión al backend
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -22,27 +23,13 @@ function LocationSelector({ position, setPosition }) {
 }
 
 export default function AdminParadas() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // PERSISTENCIA REAL: Carga las paradas del navegador o usa las por defecto
-  const [paradas, setParadas] = useState(() => {
-    const guardadas = localStorage.getItem('stopover_admin_paradas');
-    if (guardadas) {
-      try {
-        return JSON.parse(guardadas);
-      } catch (e) {
-        console.error("Error al leer localStorage", e);
-      }
-    }
-    return [
-      { id: '#P-01', nombre: 'Café de Nadie', propietario: 'Maria A', categoria: 'Cafetería', estatus: 'Aprobado', coords: [17.0654, -96.7236] },
-      { id: '#P-02', nombre: 'Mirador de Cristal', propietario: 'Carlos M', categoria: 'Mirador', estatus: 'Pendiente', coords: [17.1234, -96.8123] },
-      { id: '#P-03', nombre: 'Artesanías Sola', propietario: 'Juana P', categoria: 'Pueblo Mágico', estatus: 'Aprobado', coords: [16.5231, -97.0214] },
-    ];
-  });
+  // 🚀 ESTADOS CONECTADOS AL BACKEND
+  const [paradas, setParadas] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   // ESTADOS PARA MODALES
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -51,52 +38,114 @@ export default function AdminParadas() {
   const [isNuevoModalOpen, setIsNuevoModalOpen] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoPropietario, setNuevoPropietario] = useState('');
-  const [nuevaCategoria, setNuevaCategoria] = useState('Cafetería');
-  const [nuevaCoord, setNuevaCoord] = useState([17.0654, -96.7236]);
+  const [nuevaCategoria, setNuevaCategoria] = useState('CAFETERIA');
+  const [nuevaCoord, setNuevaCoord] = useState([17.0754, -96.7236]);
+  const [nuevaDescripcion, setNuevaDescripcion] = useState('');
 
-  // ESTADO PARA MODAL DE MAPA (VER UBICACIÓN)
+  // ESTADO PARA MODAL DE MAPA
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [paradaSeleccionadaMapa, setParadaSeleccionadaMapa] = useState(null);
 
-  useEffect(() => {
-    localStorage.setItem('stopover_admin_paradas', JSON.stringify(paradas));
-  }, [paradas]);
+  // 📥 CARGAR PARADAS (Aprobadas y Pendientes)
+  const fetchParadas = async () => {
+    try {
+      setCargando(true);
+      // Hacemos las dos peticiones en paralelo para mayor velocidad
+      const [pendientesRes, aprobadosRes] = await Promise.all([
+        api.get('/admin/negocios/pendientes'),
+        api.get('/negocios/aprobados')
+      ]);
 
-  const handleApprove = (id) => {
-    setParadas(paradas.map(p => p.id === id ? { ...p, estatus: 'Aprobado' } : p));
+      const pendientes = Array.isArray(pendientesRes.data) ? pendientesRes.data : (pendientesRes.data.content || []);
+      const aprobados = Array.isArray(aprobadosRes.data) ? aprobadosRes.data : (aprobadosRes.data.content || []);
+
+      // Juntamos ambas listas y las mapeamos a la estructura de la UI
+      const combinadas = [...pendientes, ...aprobados].map(n => ({
+        id: n.id,
+        nombre: n.nombre,
+        propietario: 'Propietario', // El backend actual no devuelve el nombre del dueño en este endpoint
+        categoria: n.categoria,
+        estatus: n.estatus === 'PENDIENTE' ? 'Pendiente' : 'Aprobado',
+        coords: [n.latitud || 17.0754, n.longitud || -96.7236]
+      }));
+
+      // Ordenamos para que los pendientes salgan hasta arriba
+      combinadas.sort((a, b) => (a.estatus === 'Pendiente' ? -1 : 1));
+
+      setParadas(combinadas);
+    } catch (error) {
+      console.error("Error al cargar el catálogo de paradas:", error);
+    } finally {
+      setCargando(false);
+    }
   };
 
+  useEffect(() => {
+    fetchParadas();
+  }, []);
+
+  // ✅ APROBAR NEGOCIO
+  const handleApprove = async (id) => {
+    try {
+      await api.put(`/admin/negocios/${id}/aprobar`);
+      // Actualizamos localmente para no tener que recargar toda la página
+      setParadas(paradas.map(p => p.id === id ? { ...p, estatus: 'Aprobado' } : p));
+    } catch (error) {
+      console.error("Error al aprobar negocio:", error);
+      alert("Hubo un error al aprobar el establecimiento.");
+    }
+  };
+
+  // 🗑️ RECHAZAR/ELIMINAR NEGOCIO
   const handleOpenDeleteModal = (id) => {
     setParadaAEliminar(id);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    setParadas(paradas.filter(p => p.id !== paradaAEliminar));
-    setParadaAEliminar(null);
-    setIsDeleteModalOpen(false);
+  const handleConfirmDelete = async () => {
+    try {
+      await api.put(`/admin/negocios/${paradaAEliminar}/rechazar`);
+      setParadas(paradas.filter(p => p.id !== paradaAEliminar));
+      setParadaAEliminar(null);
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Error al rechazar negocio:", error);
+      alert("Hubo un error al eliminar el establecimiento.");
+    }
   };
 
-  const handleCrearParada = (e) => {
+  // 📝 CREAR NUEVA PARADA DESDE EL ADMIN
+  const handleCrearParada = async (e) => {
     e.preventDefault();
-    if (!nuevoNombre || !nuevoPropietario) {
-      alert('Por favor completa todos los campos.');
+    if (!nuevoNombre) {
+      alert('Por favor completa el nombre del lugar.');
       return;
     }
 
-    const nuevaParadaObj = {
-      id: `#P-0${paradas.length + 1}`,
-      nombre: nuevoNombre,
-      propietario: nuevoPropietario,
-      categoria: nuevaCategoria,
-      estatus: 'Aprobado',
-      coords: nuevaCoord
-    };
+    try {
+      const payload = {
+        nombre: nuevoNombre,
+        categoria: nuevaCategoria,
+        descripcion: nuevaDescripcion || 'Parada creada por administración',
+        direccion: 'Ubicación seleccionada en mapa',
+        latitud: parseFloat(nuevaCoord[0]),
+        longitud: parseFloat(nuevaCoord[1])
+      };
 
-    setParadas([nuevaParadaObj, ...paradas]);
-    setNuevoNombre('');
-    setNuevoPropietario('');
-    setIsNuevoModalOpen(false);
+      // Registramos la parada
+      await api.post('/negocios/registrar', payload);
+      
+      // Recargamos la lista para obtener el ID real de la base de datos
+      await fetchParadas();
+
+      setNuevoNombre('');
+      setNuevoPropietario('');
+      setNuevaDescripcion('');
+      setIsNuevoModalOpen(false);
+    } catch (error) {
+      console.error("Error al crear parada:", error);
+      alert("No se pudo crear la parada.");
+    }
   };
 
   const getStatusClass = (estatus) => {
@@ -105,6 +154,11 @@ export default function AdminParadas() {
     } else {
       return isDarkMode ? 'bg-amber-950/60 text-amber-300 border border-amber-800/50' : 'bg-amber-100 text-amber-700';
     }
+  };
+
+  // Función para formatear el ID (Ej: ID 6 -> #P-06)
+  const formatId = (id) => {
+    return `#P-${id.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -133,80 +187,85 @@ export default function AdminParadas() {
           </div>
 
           <div className={`p-6 rounded-2xl shadow-sm border flex-1 transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className={`border-y-2 text-sm ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-400'}`}>
-                  <th className="py-3 px-2 font-medium">ID</th>
-                  <th className="py-3 px-2 font-medium">Nombre del Lugar</th>
-                  <th className="py-3 px-2 font-medium">Propietario</th>
-                  <th className="py-3 px-2 font-medium">Categoría</th>
-                  <th className="py-3 px-2 font-medium">Estatus</th>
-                  <th className="py-3 px-2 font-medium">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paradas.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-400 font-medium">
-                      No hay paradas registradas en el catálogo.
-                    </td>
+            {cargando ? (
+              <div className="text-center py-10 font-semibold text-gray-500">
+                Sincronizando con PostgreSQL...
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className={`border-y-2 text-sm ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-400'}`}>
+                    <th className="py-3 px-2 font-medium">ID</th>
+                    <th className="py-3 px-2 font-medium">Nombre del Lugar</th>
+                    <th className="py-3 px-2 font-medium">Propietario</th>
+                    <th className="py-3 px-2 font-medium">Categoría</th>
+                    <th className="py-3 px-2 font-medium">Estatus</th>
+                    <th className="py-3 px-2 font-medium">Acción</th>
                   </tr>
-                ) : (
-                  paradas.map((parada) => (
-                    <tr key={parada.id} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
-                      <td className="py-4 px-2 font-bold">{parada.id}</td>
-                      <td className="py-4 px-2">{parada.nombre}</td>
-                      <td className={`py-4 px-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{parada.propietario}</td>
-                      <td className="py-4 px-2">{parada.categoria}</td>
-                      <td className="py-4 px-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(parada.estatus)}`}>
-                          {parada.estatus}
-                        </span>
-                      </td>
-                      <td className="py-4 px-2 flex items-center gap-2">
-                        {/* 🟢 BOTÓN VER UBICACIÓN CORREGIDO CON SOPORTE MODO OSCURO */}
-                        <button 
-                          onClick={() => {
-                            setParadaSeleccionadaMapa(parada);
-                            setIsMapModalOpen(true);
-                          }}
-                          className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                            isDarkMode 
-                              ? 'bg-emerald-950/80 text-emerald-300 hover:bg-emerald-900 border border-emerald-800/50' 
-                              : 'text-[#4F7959] bg-[#CBE3C7]/40 hover:bg-[#CBE3C7]'
-                          }`}
-                        >
-                          Ver ubicación
-                        </button>
-
-                        {parada.estatus === 'Pendiente' && (
-                          <button 
-                            onClick={() => handleApprove(parada.id)}
-                            className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-green-950/80 text-green-300 hover:bg-green-900 border border-green-800/50' 
-                                : 'text-green-600 bg-green-50 hover:bg-green-100'
-                            }`}
-                          >
-                            Aprobar
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => handleOpenDeleteModal(parada.id)}
-                          className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                            isDarkMode 
-                              ? 'bg-red-950/80 text-red-300 hover:bg-red-900 border border-red-800/50' 
-                              : 'text-red-500 bg-red-50 hover:bg-red-100'
-                          }`}
-                        >
-                          Eliminar
-                        </button>
+                </thead>
+                <tbody>
+                  {paradas.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8 text-gray-400 font-medium">
+                        No hay paradas registradas en el catálogo.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paradas.map((parada) => (
+                      <tr key={parada.id} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
+                        <td className="py-4 px-2 font-bold">{formatId(parada.id)}</td>
+                        <td className="py-4 px-2 font-semibold">{parada.nombre}</td>
+                        <td className={`py-4 px-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{parada.propietario}</td>
+                        <td className="py-4 px-2">{parada.categoria}</td>
+                        <td className="py-4 px-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(parada.estatus)}`}>
+                            {parada.estatus}
+                          </span>
+                        </td>
+                        <td className="py-4 px-2 flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              setParadaSeleccionadaMapa(parada);
+                              setIsMapModalOpen(true);
+                            }}
+                            className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-emerald-950/80 text-emerald-300 hover:bg-emerald-900 border border-emerald-800/50' 
+                                : 'text-[#4F7959] bg-[#CBE3C7]/40 hover:bg-[#CBE3C7]'
+                            }`}
+                          >
+                            Ver ubicación
+                          </button>
+
+                          {parada.estatus === 'Pendiente' && (
+                            <button 
+                              onClick={() => handleApprove(parada.id)}
+                              className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-green-950/80 text-green-300 hover:bg-green-900 border border-green-800/50' 
+                                  : 'text-green-600 bg-green-50 hover:bg-green-100'
+                              }`}
+                            >
+                              Aprobar
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleOpenDeleteModal(parada.id)}
+                            className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-red-950/80 text-red-300 hover:bg-red-900 border border-red-800/50' 
+                                : 'text-red-500 bg-red-50 hover:bg-red-100'
+                            }`}
+                          >
+                            Rechazar
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </main>
       </div>
@@ -220,14 +279,14 @@ export default function AdminParadas() {
               <button onClick={() => setIsMapModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl cursor-pointer">✕</button>
             </div>
             
-            <div className="w-full h-72 rounded-2xl overflow-hidden border border-gray-300 shadow-inner mb-4">
+            <div className="w-full h-72 rounded-2xl overflow-hidden border border-gray-300 shadow-inner mb-4 relative z-10">
               <MapContainer 
-                center={paradaSeleccionadaMapa.coords || [17.0654, -96.7236]} 
+                center={paradaSeleccionadaMapa.coords || [17.0754, -96.7236]} 
                 zoom={14} 
                 style={{ width: '100%', height: '100%' }}
               >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Marker position={paradaSeleccionadaMapa.coords || [17.0654, -96.7236]} />
+                <Marker position={paradaSeleccionadaMapa.coords || [17.0754, -96.7236]} />
               </MapContainer>
             </div>
 
@@ -265,40 +324,29 @@ export default function AdminParadas() {
                   />
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Propietario</label>
-                  <input 
-                    type="text" 
-                    value={nuevoPropietario}
-                    onChange={(e) => setNuevoPropietario(e.target.value)}
-                    placeholder="Ej. Oscar G."
-                    className={`w-full border rounded-xl py-2 px-3 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
-                  />
+                  <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Categoría</label>
+                  <select 
+                    value={nuevaCategoria}
+                    onChange={(e) => setNuevaCategoria(e.target.value)}
+                    className={`w-full border rounded-xl py-2 px-3 text-sm font-semibold focus:outline-none focus:border-[#2A4532] cursor-pointer ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                  >
+                    <option value="CAFETERIA">Cafetería</option>
+                    <option value="MIRADOR">Mirador</option>
+                    <option value="PUEBLO_MAGICO">Pueblo Mágico</option>
+                    <option value="RESTAURANTE">Restaurante</option>
+                  </select>
                 </div>
-              </div>
-
-              <div>
-                <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Categoría</label>
-                <select 
-                  value={nuevaCategoria}
-                  onChange={(e) => setNuevaCategoria(e.target.value)}
-                  className={`w-full border rounded-xl py-2 px-3 text-sm font-semibold focus:outline-none focus:border-[#2A4532] cursor-pointer ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
-                >
-                  <option value="Cafetería">Cafetería</option>
-                  <option value="Mirador">Mirador</option>
-                  <option value="Pueblo Mágico">Pueblo Mágico</option>
-                  <option value="Restaurante">Restaurante</option>
-                  <option value="Playa">Playa</option>
-                </select>
               </div>
 
               <div>
                 <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Selecciona ubicación en el mapa (haz clic)</label>
-                <div className="w-full h-48 rounded-xl overflow-hidden border border-gray-300 shadow-inner">
-                  <MapContainer center={[17.0654, -96.7236]} zoom={11} style={{ width: '100%', height: '100%' }}>
+                <div className="w-full h-48 rounded-xl overflow-hidden border border-gray-300 shadow-inner relative z-10">
+                  <MapContainer center={[17.0754, -96.7236]} zoom={12} style={{ width: '100%', height: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <LocationSelector position={nuevaCoord} setPosition={setNuevaCoord} />
                   </MapContainer>
                 </div>
+                <p className="text-xs text-gray-400 mt-1">Lat: {nuevaCoord[0].toFixed(4)}, Lng: {nuevaCoord[1].toFixed(4)}</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t">
@@ -326,8 +374,8 @@ export default function AdminParadas() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="¿Estás seguro de eliminar esta parada?"
-        message="Esta acción la removerá permanentemente del catálogo global de la plataforma."
+        title="¿Estás seguro de rechazar/eliminar esta parada?"
+        message="Esta acción removerá permanentemente el establecimiento del sistema y de la vista de los viajeros."
       />
 
     </div>

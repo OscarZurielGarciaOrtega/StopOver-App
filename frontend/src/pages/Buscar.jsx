@@ -67,7 +67,7 @@ export default function Buscar() {
       icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
     },
     { 
-      id: 'sim-3', title: '20 DE NOVIEMBRE', route: 'Juquila → Oaxaca', category: 'Mercado', 
+      id: 'sim-3', title: '20 DE NOVIEMBRE', route: 'Juquila → Oaxaca', category: 'Restaurantes', 
       catColor: 'text-[#65A30D]', iconBg: 'bg-[#65A30D]/80',
       img: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80', icon: iconRestaurante
     },
@@ -90,27 +90,28 @@ export default function Buscar() {
     const cargarNegociosReales = async () => {
       try {
         const response = await api.get('/negocios/aprobados');
-        const negociosBack = Array.isArray(response.data) ? response.data : [];
+        const negociosBack = Array.isArray(response.data) ? response.data : (response.data.content || []);
 
         const negociosMapeados = negociosBack.map(negocio => {
-          const cat = negocio.categoria ? negocio.categoria.toUpperCase() : 'OTRO';
+          const cat = negocio.categoria ? negocio.categoria.toUpperCase().trim() : 'OTRO';
+          
           let category = 'Restaurantes';
           let catColor = 'text-[#65A30D]';
           let iconBg = 'bg-[#65A30D]/80';
           let img = 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80';
           let icon = iconRestaurante;
 
-          if (cat === 'CAFETERIA' || cat === 'CAFETERÍAS') {
+          if (cat.includes('CAFE') || cat.includes('CAFETERIA')) {
             category = 'Cafeterías';
             catColor = 'text-[#92400E]'; iconBg = 'bg-[#92400E]/80';
             img = 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&q=80';
             icon = iconCafe;
-          } else if (cat === 'MIRADOR' || cat === 'MIRADORES') {
+          } else if (cat.includes('MIRADOR')) {
             category = 'Miradores';
             catColor = 'text-[#E11D48]'; iconBg = 'bg-[#E11D48]/80';
             img = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&q=80';
             icon = iconMirador;
-          } else if (cat === 'PUEBLO_MAGICO' || cat === 'PUEBLOS MÁGICOS') {
+          } else if (cat.includes('PUEBLO') || cat.includes('MAGICO')) {
             category = 'Pueblos mágicos';
             catColor = 'text-[#0284C7]'; iconBg = 'bg-[#0284C7]/80';
             img = 'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?w=500&q=80';
@@ -124,11 +125,12 @@ export default function Buscar() {
             category: category,
             catColor: catColor,
             iconBg: iconBg,
-            img: img,
+            img: negocio.imagenUrl || img, // Si el back llega a mandar imagen, la usa; si no, la por defecto
             icon: icon
           };
         });
 
+        // Juntamos los reales aprobados de la BD con los simulados
         setTodosLosLugares([...negociosMapeados, ...datosSimulados]);
       } catch (error) {
         console.error("Error al cargar negocios de la API:", error);
@@ -245,7 +247,7 @@ export default function Buscar() {
                           </svg>
                         </div>
 
-                        {/* 💖 BOTÓN DE CORAZÓN PARA AGREGAR/QUITAR DE FAVORITOS */}
+                        {/* 💖 BOTÓN DE CORAZÓN */}
                         <button 
                           onClick={() => toggleFavoritoLugar(lugar)}
                           title={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}

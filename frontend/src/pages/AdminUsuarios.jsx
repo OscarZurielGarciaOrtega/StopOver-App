@@ -26,46 +26,54 @@ export default function AdminUsuarios() {
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoCorreo, setNuevoCorreo] = useState('');
   const [nuevoRol, setNuevoRol] = useState('VIAJERO');
+  const [nuevoPassword, setNuevoPassword] = useState('Password123!');
 
   // 🚀 CARGAR USUARIOS DESDE EL BACKEND
+  const fetchUsuarios = async () => {
+    try {
+      setCargando(true);
+      const response = await api.get('/usuarios');
+      const lista = response.data.content || response.data;
+      
+      const usuariosFormateados = lista.map(u => ({
+        id: u.id,
+        nombre: u.nombre,
+        correo: u.email, 
+        rol: u.rol || 'VIAJERO', 
+        estatus: u.estatus || 'Activo' // Ahora mapeamos el estatus real si el backend lo manda
+      }));
+
+      setUsuarios(usuariosFormateados);
+    } catch (error) {
+      console.error("Error al obtener la lista de usuarios:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const response = await api.get('/usuarios');
-        const lista = response.data.content || response.data;
-        
-        const usuariosFormateados = lista.map(u => ({
-          id: u.id,
-          nombre: u.nombre,
-          correo: u.email, 
-          rol: u.rol || 'VIAJERO', 
-          estatus: 'Activo' // Simulado por ahora
-        }));
-
-        setUsuarios(usuariosFormateados);
-      } catch (error) {
-        console.error("Error al obtener la lista de usuarios:", error);
-      } finally {
-        setCargando(false);
-      }
-    };
-
     fetchUsuarios();
   }, []);
 
-  // Función para alternar Bloqueo (UI por ahora)
-  const handleToggleBloqueo = async (id) => {
-    // TODO: Conectar a PUT /api/admin/usuarios/{id}/estatus
-    setUsuarios(usuarios.map(u => {
-      if (u.id === id) {
-        const nuevoEstatus = u.estatus === 'Activo' ? 'Bloqueado' : 'Activo';
-        return { ...u, estatus: nuevoEstatus };
-      }
-      return u;
-    }));
+  // 🔒 BLOQUEAR / DESBLOQUEAR REAL CON EL BACKEND
+  const handleToggleBloqueo = async (id, estatusActual) => {
+    try {
+      const nuevoEstatus = estatusActual === 'Activo' ? 'Bloqueado' : 'Activo';
+      await api.put(`/admin/usuarios/${id}/estatus`, { estatus: nuevoEstatus });
+      
+      setUsuarios(usuarios.map(u => {
+        if (u.id === id) {
+          return { ...u, estatus: nuevoEstatus };
+        }
+        return u;
+      }));
+    } catch (error) {
+      console.error("Error al cambiar estatus del usuario:", error);
+      alert("No se pudo actualizar el estatus en el servidor.");
+    }
   };
 
-  // 🔴 Eliminar usuario
+  // 🔴 Eliminar usuario real
   const handleOpenDeleteModal = (id) => {
     setUsuarioAEliminar(id);
     setIsDeleteModalOpen(true);
@@ -73,16 +81,17 @@ export default function AdminUsuarios() {
 
   const handleConfirmDelete = async () => {
     try {
-      // TODO: Conectar a DELETE /api/admin/usuarios/{id}
+      await api.delete(`/admin/usuarios/${usuarioAEliminar}`);
       setUsuarios(usuarios.filter(u => u.id !== usuarioAEliminar));
       setUsuarioAEliminar(null);
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error("Error al eliminar usuario:", error);
+      alert("No se pudo eliminar el usuario en el servidor.");
     }
   };
 
-  // 🟢 Crear Usuario
+  // 🟢 Crear Usuario Real (Endpoint de Admin)
   const handleCrearUsuario = async (e) => {
     e.preventDefault();
     if (!nuevoNombre || !nuevoCorreo) {
@@ -91,22 +100,26 @@ export default function AdminUsuarios() {
     }
 
     try {
-      // TODO: Conectar a POST /api/admin/usuarios
-      const nuevoObj = {
-        id: Date.now(),
+      const payload = {
         nombre: nuevoNombre,
-        correo: nuevoCorreo,
-        rol: nuevoRol,
-        estatus: 'Activo'
+        email: nuevoCorreo,
+        password: nuevoPassword,
+        rol: nuevoRol
       };
 
-      setUsuarios([nuevoObj, ...usuarios]);
+      await api.post('/admin/usuarios', payload);
+      
+      // Recargamos la lista desde la base de datos
+      await fetchUsuarios();
+
       setNuevoNombre('');
       setNuevoCorreo('');
       setNuevoRol('VIAJERO');
       setIsNuevoModalOpen(false);
     } catch (error) {
       console.error("Error al crear usuario:", error);
+      const msg = error.response?.data?.mensajes?.[0] || error.response?.data?.message || 'No se pudo crear el usuario.';
+      alert(msg);
     }
   };
 
@@ -117,13 +130,14 @@ export default function AdminUsuarios() {
     setIsRolModalOpen(true);
   };
 
-  // 🔵 Confirmar Cambio de Rol
+  // 🔵 Confirmar Cambio de Rol Real con el Backend
   const handleConfirmarCambioRol = async (e) => {
     e.preventDefault();
     try {
-      // TODO: Conectar a PUT /api/admin/usuarios/{id}/rol enviando { rol: nuevoRolSeleccionado }
+      await api.put(`/admin/usuarios/${usuarioSeleccionado.id}/rol`, {
+        rol: nuevoRolSeleccionado
+      });
       
-      // Actualizamos UI localmente por ahora
       setUsuarios(usuarios.map(u => 
         u.id === usuarioSeleccionado.id ? { ...u, rol: nuevoRolSeleccionado } : u
       ));
@@ -131,6 +145,7 @@ export default function AdminUsuarios() {
       setUsuarioSeleccionado(null);
     } catch (error) {
       console.error("Error al cambiar rol:", error);
+      alert("No se pudo actualizar el rol en el servidor.");
     }
   };
 
@@ -161,7 +176,7 @@ export default function AdminUsuarios() {
 
           <div className={`p-6 rounded-2xl shadow-sm border flex-1 transition-colors duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             {cargando ? (
-              <div className="text-center py-8 text-gray-500 font-semibold">Cargando usuarios desde la base de datos...</div>
+              <div className="text-center py-8 text-gray-500 font-semibold">Cargando usuarios desde PostgreSQL...</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[800px]">
@@ -207,7 +222,6 @@ export default function AdminUsuarios() {
                             </span>
                           </td>
                           <td className="py-4 px-2 flex items-center gap-2">
-                            {/* NUEVO BOTÓN CAMBIAR ROL */}
                             <button 
                               onClick={() => handleAbrirModalRol(usuario)}
                               className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -217,7 +231,7 @@ export default function AdminUsuarios() {
                               Cambiar Rol
                             </button>
                             <button 
-                              onClick={() => handleToggleBloqueo(usuario.id)}
+                              onClick={() => handleToggleBloqueo(usuario.id, usuario.estatus)}
                               className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                                 usuario.estatus === 'Activo' 
                                   ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' 
@@ -317,6 +331,17 @@ export default function AdminUsuarios() {
                   value={nuevoCorreo}
                   onChange={(e) => setNuevoCorreo(e.target.value)}
                   placeholder="ejemplo@correo.com"
+                  className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-xs font-bold uppercase mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Contraseña temporal</label>
+                <input 
+                  type="password" 
+                  value={nuevoPassword}
+                  onChange={(e) => setNuevoPassword(e.target.value)}
+                  placeholder="********"
                   className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
                 />
               </div>

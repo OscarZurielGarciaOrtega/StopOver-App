@@ -68,6 +68,20 @@ export default function Ajustes() {
     setPasswordNueva('');
   };
 
+  // 🚪 FUNCIÓN PARA CERRAR SESIÓN
+  const handleCerrarSesion = () => {
+    // Limpiamos los datos de sesión del almacenamiento local
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('nombre');
+    localStorage.removeItem('rol');
+    localStorage.removeItem('stopover_user_correo');
+    localStorage.removeItem('stopover_user_nombre');
+    
+    // Redirigimos al login (ajusta la ruta '/' o '/login' según maneje tu Router)
+    window.location.href = '/';
+  };
+
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF9F6] text-gray-800'}`}>
       
@@ -104,7 +118,6 @@ export default function Ajustes() {
               <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Perfil</h3>
               
               <div className="flex items-center gap-6 mt-6 mb-6">
-                {/* Círculo con la inicial en lugar de foto genérica */}
                 <div className="w-16 h-16 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-2xl shadow-md border-2 border-gray-300">
                   {correo.charAt(0).toUpperCase()}
                 </div>
@@ -213,8 +226,18 @@ export default function Ajustes() {
               </button>
             </div>
             
+            {/* OTROS / SESIÓN */}
             <div>
-              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Otros...</h3>
+              <h3 className={`text-[22px] font-medium mb-2 border-b-2 pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-900 border-gray-900'}`}>Sesión</h3>
+              <p className={`text-sm mb-4 mt-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Finaliza tu sesión actual de forma segura para cambiar de cuenta o rol.
+              </p>
+              <button 
+                onClick={handleCerrarSesion}
+                className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
+                Cerrar sesión
+              </button>
             </div>
 
           </div>

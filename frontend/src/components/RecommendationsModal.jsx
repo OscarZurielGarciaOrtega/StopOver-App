@@ -1,43 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios'; // Conexión oficial a la API de Emma
+import api from '../api/axios'; // Conexión oficial a la API
 
 export default function RecommendationsModal({ isOpen, onClose, categoria, destinoRuta, rutaIdActiva, onAgregar }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
   const [recomendaciones, setRecomendaciones] = useState([]);
-  const [cargando,setCargando] = useState(true);
+  const [cargando, setCargando] = useState(true);
   const [guardandoId, setGuardandoId] = useState(null);
-
-  const obtenerTipoBack = (cat) => {
-    switch (cat) {
-      case 'Cafeterías': return 'CAFETERIA';
-      case 'Miradores': return 'MIRADOR';
-      case 'Pueblos mágicos': return 'PUEBLO_MAGICO';
-      default: return 'CAFETERIA';
-    }
-  };
 
   useEffect(() => {
     if (!isOpen || !categoria) return;
 
     const cargarNegociosOficiales = async () => {
       setCargando(true);
-      const tipoBuscado = obtenerTipoBack(categoria);
-      let listaFinal = [];
+      let listaOficiales = [];
+      let listaRespaldo = [];
 
+      const catBuscada = categoria.toLowerCase().trim();
+
+      // 1. Consultar negocios aprobados oficiales de la BD de PostgreSQL
       try {
-        // 1. Consultamos los negocios aprobados de la BD oficial de Emma
         const resAprobados = await api.get('/negocios/aprobados').catch(() => ({ data: [] }));
-        const negociosBack = Array.isArray(resAprobados.data) ? resAprobados.data : [];
+        const negociosBack = Array.isArray(resAprobados.data) ? resAprobados.data : (resAprobados.data.content || []);
 
-        const filtrados = negociosBack.filter(n => n.categoria && n.categoria.toUpperCase() === tipoBuscado);
+        const filtrados = negociosBack.filter(n => {
+          if (!n.categoria) return false;
+          const catNegocio = n.categoria.toLowerCase().trim();
+          if (catBuscada.includes('cafe') && (catNegocio.includes('cafe') || catNegocio.includes('cafeteria'))) return true;
+          if (catBuscada.includes('mirador') && catNegocio.includes('mirador')) return true;
+          if (catBuscada.includes('pueblo') && (catNegocio.includes('pueblo') || catNegocio.includes('magico'))) return true;
+          return catNegocio === catBuscada;
+        });
 
         if (filtrados.length > 0) {
-          listaFinal = filtrados.map(item => ({
+          listaOficiales = filtrados.map(item => ({
             id: item.id,
             nombre: item.nombre,
-            ubicacion: item.direccion || `Ubicación en ${destinoRuta}`,
+            ubicacion: item.direccion || `Ubicación registrada`,
             rating: "4.9 ⭐",
-            icono: categoria === 'Cafeterías' ? '☕' : categoria === 'Miradores' ? '📸' : '✨',
+            icono: categoria.toLowerCase().includes('cafe') ? '☕' : categoria.toLowerCase().includes('mirador') ? '📸' : '✨',
             latitud: item.latitud || item.lat,
             longitud: item.longitud || item.lng,
             lat: item.latitud || item.lat,
@@ -46,66 +46,61 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
           }));
         }
       } catch (err) {
-        console.warn("Error consultando back, usando respaldo cartográfico...", err);
+        console.warn("Error consultando negocios oficiales:", err);
       }
 
-      // 2. Si el servidor no tiene suficientes, complementamos con puntos reales del mapa acotados a la zona
-      if (listaFinal.length === 0) {
-        try {
-          const destinoLimpio = destinoRuta ? destinoRuta.split(',')[0].trim() : 'Oaxaca';
-          const resGeo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(destinoLimpio)}&count=1&language=es&format=json`);
-          const geoData = await resGeo.json();
-          
-          let latBase = 17.0654;
-          let lngBase = -96.7236;
-          let bbox = "-97.5,16.5,-95.5,18.0";
+      // 2. Consultar respaldo cartográfico (OpenStreetMap) para que coexistan ambos
+      try {
+        const destinoLimpio = destinoRuta ? destinoRuta.split(',')[0].trim() : 'Oaxaca';
+        const resGeo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(destinoLimpio)}&count=1&language=es&format=json`);
+        const geoData = await resGeo.json();
+        
+        let latBase = 17.0654;
+        let lngBase = -96.7236;
+        let bbox = "-97.5,16.5,-95.5,18.0";
 
-          if (geoData && geoData.results && geoData.results.length > 0) {
-            latBase = geoData.results[0].latitude;
-            lngBase = geoData.results[0].longitude;
-            bbox = `${lngBase - 0.2},${latBase - 0.2},${lngBase + 0.2},${latBase + 0.2}`;
-          }
-
-          let osmTag = categoria === 'Cafeterías' ? 'cafe' : categoria === 'Miradores' ? 'viewpoint' : 'attraction';
-          const urlOSM = `https://nominatim.openstreetmap.org/search?format=json&amenity=${osmTag}&bounded=1&viewbox=${bbox}&countrycodes=mx&limit=5`;
-          
-          const resOSM = await fetch(urlOSM, { headers: { 'User-Agent': 'StopOverApp/1.0' } });
-          const dataOSM = await resOSM.json();
-
-          if (Array.isArray(dataOSM) && dataOSM.length > 0) {
-            const OSMValidos = dataOSM
-              .filter(item => {
-                const nombre = item.display_name.split(',')[0].toLowerCase();
-                return nombre !== 'cafe' && nombre !== 'mirador';
-              })
-              .map((item, idx) => ({
-                id: item.place_id || (5000 + idx),
-                nombre: item.display_name.split(',')[0],
-                ubicacion: item.display_name,
-                rating: "4.8 ⭐",
-                icono: categoria === 'Cafeterías' ? '☕' : categoria === 'Miradores' ? '📸' : '✨',
-                latitud: parseFloat(item.lat),
-                longitud: parseFloat(item.lon),
-                lat: parseFloat(item.lat),
-                lng: parseFloat(item.lon),
-                esDeServidor: false
-              }));
-            listaFinal = [...listaFinal, ...OSMValidos];
-          }
-        } catch (mapErr) {
-          console.error("Error en mapa:", mapErr);
+        if (geoData && geoData.results && geoData.results.length > 0) {
+          latBase = geoData.results[0].latitude;
+          lngBase = geoData.results[0].longitude;
+          bbox = `${lngBase - 0.2},${latBase - 0.2},${lngBase + 0.2},${latBase + 0.2}`;
         }
+
+        let osmTag = categoria.toLowerCase().includes('cafe') ? 'cafe' : categoria.toLowerCase().includes('mirador') ? 'viewpoint' : 'attraction';
+        const urlOSM = `https://nominatim.openstreetmap.org/search?format=json&amenity=${osmTag}&bounded=1&viewbox=${bbox}&countrycodes=mx&limit=4`;
+        
+        const resOSM = await fetch(urlOSM, { headers: { 'User-Agent': 'StopOverApp/1.0' } });
+        const dataOSM = await resOSM.json();
+
+        if (Array.isArray(dataOSM) && dataOSM.length > 0) {
+          listaRespaldo = dataOSM.map((item, idx) => ({
+            id: item.place_id || (5000 + idx),
+            nombre: item.display_name.split(',')[0],
+            ubicacion: item.display_name,
+            rating: "4.8 ⭐",
+            icono: categoria.toLowerCase().includes('cafe') ? '☕' : '📸',
+            latitud: parseFloat(item.lat),
+            longitud: parseFloat(item.lon),
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            esDeServidor: false
+          }));
+        }
+      } catch (mapErr) {
+        console.error("Error en mapa OpenStreetMap:", mapErr);
       }
 
-      // 3. Respaldo por si todo falla
+      // 3. COEXISTENCIA TOTAL: Primero los oficiales de Emma, luego los del mapa
+      let listaFinal = [...listaOficiales, ...listaRespaldo];
+
+      // Si de plano no hay nada, metemos un respaldo de emergencia
       if (listaFinal.length === 0) {
         listaFinal = [
           {
             id: 9999,
-            nombre: `${categoria === 'Cafeterías' ? 'Café Central' : 'Mirador'} de ${destinoRuta || 'Oaxaca'}`,
+            nombre: `${categoria} de ${destinoRuta || 'Oaxaca'}`,
             ubicacion: `Punto en la ruta hacia ${destinoRuta}`,
             rating: "4.9 ⭐",
-            icono: categoria === 'Cafeterías' ? '☕' : '📸',
+            icono: '☕',
             latitud: 17.0654,
             longitud: -96.7236,
             lat: 17.0654,
@@ -122,18 +117,15 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
     cargarNegociosOficiales();
   }, [isOpen, categoria, destinoRuta]);
 
-  // FUNCIÓN OFICIAL PARA GUARDAR EN LA API DE EMMA
+  // FUNCIÓN OFICIAL PARA GUARDAR EN LA API
   const manejarAgregarParada = async (item) => {
     setGuardandoId(item.id);
 
     try {
-      // Si tenemos un ID de ruta activa en el sistema y el negocio viene del servidor de Emma
       if (rutaIdActiva && item.esDeServidor) {
-        // Consumimos el endpoint oficial de Emma: POST /api/negocios/{negocioId}/agregar-a-ruta/{rutaId}
         await api.post(`/negocios/${item.id}/agregar-a-ruta/${rutaIdActiva}`);
       }
 
-      // Ejecutamos la función padre para actualizar la UI instantáneamente
       onAgregar({
         ...item,
         latitud: item.latitud || item.lat,
@@ -142,8 +134,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
 
       onClose();
     } catch (error) {
-      console.error("Error al guardar la parada en la API de Emma:", error);
-      // Aunque falle por red o ID temporal, mandamos la parada al front para no bloquear al usuario
+      console.error("Error al guardar la parada:", error);
       onAgregar(item);
       onClose();
     } finally {
@@ -163,7 +154,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
             <span className="text-xs uppercase tracking-wider text-[#CBE3C7] font-bold">API PostgreSQL & Mapa ⚡</span>
             <h3 className="text-xl font-bold">{categoria} en {destinoRuta}</h3>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-200'}`}>
-              Guardado oficial directo en la base de datos de la ruta
+              Lugares oficiales y puntos de ruta disponibles
             </p>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl font-bold cursor-pointer">✕</button>
@@ -173,18 +164,27 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
           {cargando ? (
             <div className={`text-center py-8 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              🔄 Consultando base de datos de Emma...
+              🔄 Consultando base de datos y mapa...
             </div>
           ) : recomendaciones.length > 0 ? (
             recomendaciones.map((item) => (
               <div 
                 key={item.id}
-                className={`border rounded-2xl p-4 flex items-center justify-between transition-all shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-700 hover:border-emerald-500/40' : 'bg-[#FAF9F6] border-gray-100 hover:border-[#2A4532]/40'}`}
+                className={`border rounded-2xl p-4 flex items-center justify-between transition-all shadow-sm ${
+                  item.esDeServidor 
+                    ? (isDarkMode ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-[#CBE3C7]/30 border-[#2A4532]/40') 
+                    : (isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-[#FAF9F6] border-gray-100')
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-2xl p-2 rounded-xl shadow-xs ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>{item.icono}</span>
                   <div>
-                    <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.nombre}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.nombre}</h4>
+                      {item.esDeServidor && (
+                        <span className="bg-[#2A4532] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Oficial</span>
+                      )}
+                    </div>
                     <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{item.ubicacion}</p>
                     <span className="text-xs font-semibold text-[#F97316]">{item.rating}</span>
                   </div>
@@ -201,7 +201,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
             ))
           ) : (
             <div className={`text-center py-8 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              No hay negocios disponibles en esta zona.
+              No hay negocios disponibles en esta categoría.
             </div>
           )}
         </div>

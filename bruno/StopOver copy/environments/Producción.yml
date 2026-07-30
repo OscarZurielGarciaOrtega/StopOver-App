@@ -1,0 +1,4 @@
+name: Producción
+variables:
+  - name: baseUrl
+    value: https://stopover-app.lat

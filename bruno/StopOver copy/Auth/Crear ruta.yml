@@ -1,0 +1,21 @@
+info:
+  name: Crear ruta
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/rutas"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: '{ "nombre": "Oaxaca a Puebla", "origen": "Oaxaca", "destino": "Puebla", "fechaSalida": "2026-09-01T09:00:00", "paradaIds": [1,2,3] }'
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

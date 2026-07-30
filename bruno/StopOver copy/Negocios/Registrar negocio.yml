@@ -1,0 +1,29 @@
+info:
+  name: Registrar negocio
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/negocios/registrar"
+  headers:
+    - name: Authorization
+      value: Bearer {{tokenPropietario}}
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Café del Viajero",
+        "categoria": "CAFETERIA",
+        "descripcion": "En la ruta Oaxaca-Puebla",
+        "direccion": "Km 45",
+        "latitud": 17.4536,
+        "longitud": -96.9052
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

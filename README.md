@@ -165,4 +165,67 @@ La colección de Bruno está versionada en la carpeta [`/bruno`](./bruno) de est
 
 # Frontend
 
-<!-- Aquí Oscar agrega: instrucciones de instalación del frontend, capturas de las pantallas principales, y cualquier detalle específico de su parte -->
+## Arquitectura y Tecnologías del Cliente
+* La interfaz está desarrollada con **React** utilizando **Vite** para un empaquetado ultra rápido y un rendimiento optimizado en tiempo de desarrollo y producción.
+* Se implementó un diseño responsivo adaptado tanto para dispositivos móviles como para equipos de escritorio.
+* Se hace uso de **Axios** para el consumo de la API REST, integrando de forma automática el token JWT en el header `Authorization` de cada petición protegida.
+* Manejo de estados de carga (Loading states) visibles durante las peticiones asíncronas a la API para mejorar la experiencia del usuario.
+
+## Instrucciones de Instalación y Ejecución Local
+
+### Requisitos Previos
+* Node.js (versión 18 o superior recomendada)
+* npm (gestor de paquetes de Node)
+
+### Pasos Detallados
+
+1. Abre tu terminal de comandos, clona el repositorio oficial de GitHub del proyecto y desplázate al directorio del frontend ejecutando:
+   git clone https://github.com/OscarZurielGarciaOrtega/StopOver-App.git
+   cd StopOver-App/frontend
+
+2. Instala todas las dependencias y librerías necesarias del proyecto escribiendo en tu terminal:
+   npm install
+
+3. Configura las variables de entorno creando un archivo con el nombre exacto de `.env` ubicado directamente en la raíz de la carpeta del frontend, e incluye la ruta base de comunicación hacia tu servidor backend:
+   VITE_API_URL=http://localhost:8080/api
+
+4. Inicia el servidor de desarrollo local ejecutando el siguiente comando:
+   npm run dev
+
+5. Abre tu navegador web de preferencia y accede a la dirección local que la terminal te proporcione, la cual habitualmente es http://localhost:5173.
+
+---
+
+## Pantallas Principales de la Aplicación y Experiencia de Usuario
+
+### 1. Pantalla de Inicio de Sesión y Recuperación de Contraseña
+* Cuenta con un sistema de autenticación por roles (Administrador, Viajero y Propietario).
+* Incluye validaciones estrictas debajo de cada campo de entrada en tiempo real, evitando uso de alertas nativas del navegador.
+* Contempla el flujo completo de recuperación y restablecimiento de contraseña mediante códigos numéricos enviados al correo electrónico del usuario.
+![Login y Recuperación](img/login.png)
+
+### 2. Mapa Interactivo del Viajero / Dashboard y Búsqueda
+* Interfaz principal donde los usuarios planifican sus trayectos ingresando origen y destino.
+* Sistema de **búsqueda avanzada y filtrado** de paradas (cafeterías, miradores, gasolineras, restaurantes) y establecimientos cercanos aplicando la fórmula de Haversine.
+* Paginación real del lado del servidor para el manejo eficiente de grandes volúmenes de datos en tablas y listados.
+![Dashboard Mapa](img/dashboard.png)
+
+### 3. Gestión de Favoritos e Historial de Viajes
+* Módulo interactivo para que los usuarios marquen y consulten sus rutas preferidas de forma rápida.
+* Sección de **historial** que almacena cronológicamente todas las consultas y trayectos generados previamente por el usuario autenticado.
+![Favoritos e Historial](img/historial.png)
+
+### 4. Panel de Administración y Moderación
+* Módulo exclusivo para usuarios con rol de Administrador.
+* Permite visualizar el catálogo general de paradas y ejecutar el flujo de moderación (aprobar o rechazar mediante modales de confirmación) para los nuevos negocios dados de alta por los propietarios, además de la gestión global de usuarios.
+![Admin Panel](img/admin.png)
+
+### 5. Vista de Negocios y Registro de Establecimientos
+* Interfaz orientada al rol de Propietario para registrar comercios y establecimientos locales.
+* Envía los datos con estatus inicial pendiente de moderación para su posterior revisión y autorización en el panel de administrador.
+![Mi Negocio](img/negocio.png)
+
+### 6. Módulo de Ajustes de Cuenta y Perfil
+* Pantalla de configuración donde el usuario visualiza su información personal y de perfil (nombre, correo, avatar y rol asignado).
+* Permite la administración de preferencias generales de la cuenta dentro de la aplicación.
+![Ajustes](img/ajustes.png)

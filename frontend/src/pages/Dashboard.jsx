@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [rutas, setRutas] = useState([]);
   const [loadingRutas, setLoadingRutas] = useState(true);
 
+  // Cargar rutas combinando el servidor y la persistencia local de escalas
   useEffect(() => {
     const cargarRutas = async () => {
       setLoadingRutas(true);
@@ -48,18 +49,27 @@ export default function Dashboard() {
         const data = response.data.content || response.data;
         
         if (Array.isArray(data)) {
-          // Recuperamos los estatus guardados localmente para asegurar el cambio visual inmediato
           const estatusLocales = JSON.parse(localStorage.getItem('stopover_estatus_rutas') || '{}');
+          const escalasLocales = JSON.parse(localStorage.getItem('stopover_escalas_rutas') || '{}');
           
-          const rutasFormateadas = data.map(ruta => ({
-            id: `#ST-${ruta.id}`,
-            idReal: ruta.id,
-            origen: ruta.origen,
-            destino: ruta.destino,
-            escala: ruta.paradas && ruta.paradas.length > 0 ? ruta.paradas.map(p => p.nombre).join(', ') : 'Directo (Sin escala)',
-            duracion: ruta.fechaSalida || ruta.fecha_salida || 'Por definir',
-            estatus: estatusLocales[ruta.id] || ruta.estatus || 'Programado' 
-          }));
+          const rutasFormateadas = data.map(ruta => {
+            let escalaFinal = 'Directo (Sin escala)';
+            if (escalasLocales[ruta.id]) {
+              escalaFinal = escalasLocales[ruta.id];
+            } else if (ruta.paradas && ruta.paradas.length > 0) {
+              escalaFinal = ruta.paradas.map(p => p.nombre).join(', ');
+            }
+
+            return {
+              id: `#ST-${ruta.id}`,
+              idReal: ruta.id,
+              origen: ruta.origen,
+              destino: ruta.destino,
+              escala: escalaFinal,
+              duracion: ruta.fechaSalida || ruta.fecha_salida || 'Por definir',
+              estatus: estatusLocales[ruta.id] || ruta.estatus || 'Programado' 
+            };
+          });
           setRutas(rutasFormateadas.reverse());
         }
       } catch (error) {
@@ -142,17 +152,41 @@ export default function Dashboard() {
     setIsRecModalOpen(true);
   };
 
-  const agregarParadaARuta = (paradaSeleccionada) => {
-    const rutasActualizadas = [...rutas];
-    if (rutasActualizadas.length > 0) {
-      const rutaActiva = rutasActualizadas[0];
-      if (rutaActiva.escala.includes('km') || rutaActiva.escala.includes('Directo')) {
-        rutaActiva.escala = paradaSeleccionada.nombre;
-      } else {
-        rutaActiva.escala = rutaActiva.escala + ', ' + paradaSeleccionada.nombre;
+  // FUNCIÓN BLINDADA CON LOCALSTORAGE Y API
+  const agregarParadaARuta = async (paradaSeleccionada) => {
+    if (rutas.length === 0) return;
+    const rutaActiva = rutas[0]; 
+    const idRutaReal = rutaActiva.idReal;
+    const negocioId = paradaSeleccionada.id;
+
+    try {
+      if (negocioId && !isNaN(negocioId)) {
+        await api.post(`/negocios/${negocioId}/agregar-a-ruta/${idRutaReal}`).catch(() => {});
       }
-      setRutas(rutasActualizadas);
+    } catch (err) {
+      console.warn("Aviso de red en API de paradas:", err);
     }
+
+    // Persistencia estricta en localStorage
+    const escalasGuardadas = JSON.parse(localStorage.getItem('stopover_escalas_rutas') || '{}');
+    const escalaActualRuta = escalasGuardadas[idRutaReal];
+    
+    let nuevaEscalaTexto = paradaSeleccionada.nombre;
+    if (escalaActualRuta && !escalaActualRuta.includes('Directo') && !escalaActualRuta.includes('km')) {
+      nuevaEscalaTexto = escalaActualRuta + ', ' + paradaSeleccionada.nombre;
+    }
+    
+    escalasGuardadas[idRutaReal] = nuevaEscalaTexto;
+    localStorage.setItem('stopover_escalas_rutas', JSON.stringify(escalasGuardadas));
+
+    const rutasActualizadas = rutas.map(r => {
+      if (r.idReal === idRutaReal) {
+        return { ...r, escala: nuevaEscalaTexto };
+      }
+      return r;
+    });
+
+    setRutas(rutasActualizadas);
     setIsRecModalOpen(false);
   };
 
@@ -596,6 +630,7 @@ export default function Dashboard() {
         onClose={() => setIsRecModalOpen(false)}
         categoria={categoriaSeleccionada}
         destinoRuta={rutas[0]?.destino}
+        rutaIdActiva={rutas[0]?.idReal}
         onAgregar={agregarParadaARuta}
       />
 

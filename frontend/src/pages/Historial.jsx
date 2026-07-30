@@ -2,25 +2,20 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import HistorialDetailModal from '../components/HistorialDetailModal';
 import Sidebar from '../components/Sidebar'; 
+import api from '../api/axios';
 
 export default function Historial() {
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
-  });
   const [nombre, setNombre] = useState(() => {
-    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+    return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero';
   });
 
-  // 🔔 ESCUCHAR EN TIEMPO REAL SI EL USUARIO CAMBIA SU FOTO O NOMBRE EN AJUSTES
   useEffect(() => {
     const handleProfileChange = () => {
-      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
-      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+      setNombre(localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero');
     };
     window.addEventListener('user_profile_updated', handleProfileChange);
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
@@ -28,65 +23,94 @@ export default function Historial() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rutaAEliminar, setRutaAEliminar] = useState(null);
+  const [idRutaRealEliminar, setIdRutaRealEliminar] = useState(null);
 
-  // Estados para abrir el Modal de Detalle
-  const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
+  const [rutaSeleccionadaId, setRutaSeleccionadaId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // PERSISTENCIA REAL
-  const [rutas, setRutas] = useState(() => {
-    const guardadas = localStorage.getItem('stopover_rutas_reales');
-    if (guardadas) {
-      try {
-        return JSON.parse(guardadas);
-      } catch (e) {
-        console.error("Error al leer localStorage", e);
-      }
-    }
-    return [
-      { id: '#ST-901', origen: 'Oaxaca', destino: 'Puebla', escala: 'Cafetería Centro Tehuacán', duracion: '4 h 15 m', estatus: 'En Tránsito' },
-      { id: '#ST-902', origen: 'Oaxaca', destino: 'CDMX', escala: 'Mirador Nochixtlán', duracion: '6 h 30 m', estatus: 'Completado' },
-      { id: '#ST-903', origen: 'Puebla', destino: 'CDMX', escala: 'Directo (Sin escala)', duracion: '2 h 00 m', estatus: 'Completado' },
-      { id: '#ST-904', origen: 'Oaxaca', destino: 'Pto. Escondido', escala: 'Pueblo Mágico Sola de Vega', duracion: '3 h 45 m', estatus: 'Retrasado' },
-    ];
-  });
+  const [rutas, setRutas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [paginaActual, setPaginaActual] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('Todos');
 
+  const cargarHistorialRutas = async (pagina = 0) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/rutas?page=${pagina}&size=5`);
+      const data = response.data;
+      
+      const contenido = data.content || data;
+      if (Array.isArray(contenido)) {
+        const estatusLocales = JSON.parse(localStorage.getItem('stopover_estatus_rutas') || '{}');
+        const escalasLocales = JSON.parse(localStorage.getItem('stopover_escalas_rutas') || '{}');
+
+        const rutasFormateadas = contenido.map(ruta => {
+          let escalaFinal = 'Directo (Sin escala)';
+          if (escalasLocales[ruta.id]) {
+            escalaFinal = escalasLocales[ruta.id];
+          } else if (ruta.paradas && ruta.paradas.length > 0) {
+            escalaFinal = ruta.paradas.map(p => p.nombre).join(', ');
+          }
+
+          return {
+            id: `#ST-${ruta.id}`,
+            idReal: ruta.id,
+            origen: ruta.origen,
+            destino: ruta.destino,
+            escala: escalaFinal,
+            duracion: ruta.fechaSalida || ruta.fecha_salida || 'Por definir',
+            estatus: estatusLocales[ruta.id] || ruta.estatus || 'Programado'
+          };
+        });
+
+        setRutas(rutasFormateadas);
+        setTotalPages(data.totalPages || 1);
+        setTotalElements(data.totalElements || rutasFormateadas.length);
+      }
+    } catch (error) {
+      console.error("Error al cargar historial de rutas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutas));
-  }, [rutas]);
+    cargarHistorialRutas(paginaActual);
+  }, [paginaActual]);
 
   const getStatusClass = (estatus) => {
     switch (estatus) {
       case 'En Tránsito': return 'bg-green-100 text-green-700';
       case 'Completado': return 'bg-blue-100 text-blue-700';
+      case 'Programado': return 'bg-purple-100 text-purple-700';
       case 'Retrasado': return 'bg-red-100 text-red-700';
       case 'Cancelado': return 'bg-gray-200 text-gray-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const handleOpenModal = (id) => {
-    setRutaAEliminar(id);
+  const handleOpenModal = (idRutaString, idReal) => {
+    setRutaAEliminar(idRutaString);
+    setIdRutaRealEliminar(idReal);
     setIsModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    const rutasActualizadas = rutas.filter(ruta => ruta.id !== rutaAEliminar);
-    setRutas(rutasActualizadas);
-    setRutaAEliminar(null);
-    setIsModalOpen(false);
-  };
-
-  // Función para cancelar ruta desde el detalle
-  const cancelarRuta = (idRuta) => {
-    const rutasActualizadas = rutas.map(ruta => 
-      ruta.id === idRuta ? { ...ruta, estatus: 'Cancelado' } : ruta
-    );
-    setRutas(rutasActualizadas);
-    setIsDetailModalOpen(false);
+  const handleConfirmDelete = async () => {
+    if (!idRutaRealEliminar) return;
+    try {
+      await api.delete(`/rutas/${idRutaRealEliminar}`);
+      cargarHistorialRutas(paginaActual);
+      setIsModalOpen(false);
+      setRutaAEliminar(null);
+      setIdRutaRealEliminar(null);
+    } catch (error) {
+      console.error("Error al eliminar ruta en el servidor:", error);
+      alert("No se pudo eliminar la ruta en el servidor.");
+    }
   };
 
   const rutasFiltradas = rutas.filter(ruta => {
@@ -100,12 +124,12 @@ export default function Historial() {
     return textoMatch && estatusMatch;
   });
 
-  const totalCompletadas = rutas.filter(r => r.estatus === 'Completado').length + 8;
-  const horasCamino = rutas.length * 12 + 2; 
+  const totalCompletadas = rutas.filter(r => r.estatus === 'Completado').length;
+  const horasCamino = rutas.length * 6 + 10; 
 
   const conteoEscalas = {};
   rutas.forEach(r => {
-    if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo')) {
+    if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo') && !r.escala.includes('Por definir')) {
       r.escala.split(',').forEach(parada => {
         const pLimpia = parada.trim();
         conteoEscalas[pLimpia] = (conteoEscalas[pLimpia] || 0) + 1;
@@ -113,7 +137,7 @@ export default function Historial() {
     }
   });
 
-  let paradaFrecuente = "Mirador Nochixtlán";
+  let paradaFrecuente = "Sin registros frecuentes";
   let maxRepeticiones = 0;
   Object.keys(conteoEscalas).forEach(parada => {
     if (conteoEscalas[parada] > maxRepeticiones) {
@@ -133,8 +157,9 @@ export default function Historial() {
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
         <div className="flex items-center gap-3">
-          {/* AQUÍ ESTÁ EL CAMBIO DE LA FOTO Y NOMBRE DE PERFIL */}
-          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
+          <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {nombre.charAt(0).toUpperCase()}
+          </div>
           <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
@@ -162,7 +187,7 @@ export default function Historial() {
             </div>
             <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-between h-32 transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Parada más frecuente</span>
-              <span className="text-xl font-extrabold text-[#F97316]">{paradaFrecuente}</span>
+              <span className="text-xl font-extrabold text-[#F97316] truncate">{paradaFrecuente}</span>
             </div>
           </div>
 
@@ -182,13 +207,11 @@ export default function Historial() {
                 className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
               >
                 <option value="Todos">Estatus: Todos</option>
+                <option value="Programado">Programado</option>
                 <option value="En Tránsito">En Tránsito</option>
                 <option value="Completado">Completado</option>
                 <option value="Retrasado">Retrasado</option>
                 <option value="Cancelado">Cancelado</option>
-              </select>
-              <select className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}>
-                <option>📅 Esta semana</option>
               </select>
             </div>
 
@@ -199,17 +222,19 @@ export default function Historial() {
                     <th className="py-3 px-2 font-medium">ID Ruta</th>
                     <th className="py-3 px-2 font-medium">Origen - Destino</th>
                     <th className="py-3 px-2 font-medium">Escala / Parada</th>
-                    <th className="py-3 px-2 font-medium">Duración</th>
+                    <th className="py-3 px-2 font-medium">Fecha Salida</th>
                     <th className="py-3 px-2 font-medium">Estatus</th>
                     <th className="py-3 px-2 font-medium">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rutasFiltradas.length === 0 ? (
+                  {loading ? (
+                    <tr><td colSpan="6" className="text-center py-8 text-gray-400 font-medium">Sincronizando historial con la base de datos...</td></tr>
+                  ) : rutasFiltradas.length === 0 ? (
                     <tr><td colSpan="6" className="text-center py-8 text-gray-400 font-medium">No se encontraron rutas registradas.</td></tr>
                   ) : (
                     rutasFiltradas.map((ruta) => (
-                      <tr key={ruta.id} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
+                      <tr key={ruta.idReal} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-700 text-gray-200 hover:bg-gray-700/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
                         <td className="py-4 px-2 font-bold">{ruta.id}</td>
                         <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
                         <td className="py-4 px-2">{ruta.escala}</td>
@@ -217,10 +242,9 @@ export default function Historial() {
                         <td className="py-4 px-2"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>{ruta.estatus}</span></td>
                         <td className="py-4 px-2 flex items-center gap-3">
                           
-                          {/* BOTÓN CONECTADO PARA ABRIR DETAIL MODAL */}
                           <button 
                             onClick={() => {
-                              setRutaSeleccionada(ruta);
+                              setRutaSeleccionadaId(ruta.id);
                               setIsDetailModalOpen(true);
                             }}
                             className="flex items-center gap-1 text-[#4F7959] font-semibold hover:underline cursor-pointer"
@@ -228,7 +252,7 @@ export default function Historial() {
                             Ver detalle
                           </button>
 
-                          <button onClick={() => handleOpenModal(ruta.id)} className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'bg-red-900/40 text-red-400 hover:bg-red-900/60' : 'text-red-500 bg-red-50 hover:bg-red-100'}`}>Eliminar</button>
+                          <button onClick={() => handleOpenModal(ruta.id, ruta.idReal)} className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'bg-red-900/40 text-red-400 hover:bg-red-900/60' : 'text-red-500 bg-red-50 hover:bg-red-100'}`}>Eliminar</button>
                         </td>
                       </tr>
                     ))
@@ -238,11 +262,23 @@ export default function Historial() {
             </div>
 
             <div className={`flex justify-between items-center text-sm border-t pt-4 mt-auto ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-600'}`}>
-              <span>Mostrando {rutasFiltradas.length} rutas encontradas</span>
+              <span>Mostrando página {paginaActual + 1} de {totalPages} ({totalElements} rutas en total)</span>
               <div className="flex gap-2 font-semibold">
-                <button className={`hover:text-gray-900 ${isDarkMode ? 'hover:text-white' : ''}`}>&lt;</button>
-                <button className="bg-[#4F7959] text-white px-2 py-0.5 rounded">1</button>
-                <button className={`hover:text-gray-900 ${isDarkMode ? 'hover:text-white' : ''}`}>&gt;</button>
+                <button 
+                  onClick={() => setPaginaActual(prev => Math.max(prev - 1, 0))}
+                  disabled={paginaActual === 0}
+                  className={`px-2 py-0.5 rounded cursor-pointer ${paginaActual === 0 ? 'text-gray-500 cursor-not-allowed' : ''}`}
+                >
+                  &lt;
+                </button>
+                <span className="bg-[#4F7959] text-white px-2.5 py-0.5 rounded">{paginaActual + 1}</span>
+                <button 
+                  onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPages - 1))}
+                  disabled={paginaActual >= totalPages - 1}
+                  className={`px-2 py-0.5 rounded cursor-pointer ${paginaActual >= totalPages - 1 ? 'text-gray-500 cursor-not-allowed' : ''}`}
+                >
+                  &gt;
+                </button>
               </div>
             </div>
 
@@ -256,13 +292,13 @@ export default function Historial() {
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmDelete}
         title="¿Eliminar esta ruta?"
-        message={`Estás a punto de borrar la ruta ${rutaAEliminar}. Esta acción no se puede deshacer y se perderá del registro.`}
+        message={`Estás a punto de borrar la ruta ${rutaAEliminar}. Esta acción no se puede deshacer y se perderá del registro de PostgreSQL.`}
       />
 
       <HistorialDetailModal 
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
-        rutaId={rutaSeleccionada ? rutaSeleccionada.id : null}
+        rutaId={rutaSeleccionadaId}
       />
 
     </div>

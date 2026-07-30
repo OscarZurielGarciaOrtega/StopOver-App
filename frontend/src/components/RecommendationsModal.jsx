@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import api from '../api/axios'; // Conexión oficial a la API de Emma
 
-export default function RecommendationsModal({ isOpen, onClose, categoria, destinoRuta, onAgregar }) {
+export default function RecommendationsModal({ isOpen, onClose, categoria, destinoRuta, rutaIdActiva, onAgregar }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
   const [recomendaciones, setRecomendaciones] = useState([]);
-  const [cargando, setCargando] = useState(true);
+  const [cargando,setCargando] = useState(true);
+  const [guardandoId, setGuardandoId] = useState(null);
 
   const obtenerTipoBack = (cat) => {
     switch (cat) {
@@ -18,86 +19,136 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
   useEffect(() => {
     if (!isOpen || !categoria) return;
 
-    const cargarParadasEnLaRuta = async () => {
+    const cargarNegociosOficiales = async () => {
       setCargando(true);
       const tipoBuscado = obtenerTipoBack(categoria);
-      const destinoLimpio = destinoRuta ? destinoRuta.split(',')[0].trim() : '';
+      let listaFinal = [];
 
       try {
-        // 1. Consultamos los negocios aprobados o paradas del servidor de Emma
-        const resNegocios = await api.get('/negocios/aprobados').catch(() => ({ data: [] }));
-        const listaNegocios = Array.isArray(resNegocios.data) ? resNegocios.data : [];
+        // 1. Consultamos los negocios aprobados de la BD oficial de Emma
+        const resAprobados = await api.get('/negocios/aprobados').catch(() => ({ data: [] }));
+        const negociosBack = Array.isArray(resAprobados.data) ? resAprobados.data : [];
 
-        let filtrados = listaNegocios.filter(n => 
-          n.categoria && n.categoria.toUpperCase() === tipoBuscado
-        );
-
-        if (filtrados.length === 0) {
-          const resParadas = await api.get('/paradas/recomendaciones', {
-            params: { tipo: tipoBuscado, destino: destinoLimpio }
-          }).catch(() => ({ data: [] }));
-          
-          const dataParadas = resParadas.data.content || resParadas.data;
-          if (Array.isArray(dataParadas)) {
-            filtrados = dataParadas;
-          }
-        }
+        const filtrados = negociosBack.filter(n => n.categoria && n.categoria.toUpperCase() === tipoBuscado);
 
         if (filtrados.length > 0) {
-          const formateados = filtrados.map(item => ({
+          listaFinal = filtrados.map(item => ({
             id: item.id,
             nombre: item.nombre,
-            ubicacion: item.direccion || item.ubicacion || `En ruta hacia ${destinoLimpio}`,
+            ubicacion: item.direccion || `Ubicación en ${destinoRuta}`,
             rating: "4.9 ⭐",
             icono: categoria === 'Cafeterías' ? '☕' : categoria === 'Miradores' ? '📸' : '✨',
-            latitud: item.latitud,
-            longitud: item.longitud
+            latitud: item.latitud || item.lat,
+            longitud: item.longitud || item.lng,
+            lat: item.latitud || item.lat,
+            lng: item.longitud || item.lng,
+            esDeServidor: true
           }));
-          setRecomendaciones(formateados);
-        } else {
-          // 2. Si el back no tiene suficientes, usamos paradas reales que SÍ están en la línea del trayecto Oaxaca -> Lachigoló / Tule
-          setRecomendaciones(obtenerParadasIntermediasReales(destinoLimpio, categoria));
         }
-
-      } catch (error) {
-        console.error("Error al cargar recomendaciones de la ruta:", error);
-        setRecomendaciones(obtenerParadasIntermediasReales(destinoLimpio, categoria));
-      } finally {
-        setCargando(false);
+      } catch (err) {
+        console.warn("Error consultando back, usando respaldo cartográfico...", err);
       }
+
+      // 2. Si el servidor no tiene suficientes, complementamos con puntos reales del mapa acotados a la zona
+      if (listaFinal.length === 0) {
+        try {
+          const destinoLimpio = destinoRuta ? destinoRuta.split(',')[0].trim() : 'Oaxaca';
+          const resGeo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(destinoLimpio)}&count=1&language=es&format=json`);
+          const geoData = await resGeo.json();
+          
+          let latBase = 17.0654;
+          let lngBase = -96.7236;
+          let bbox = "-97.5,16.5,-95.5,18.0";
+
+          if (geoData && geoData.results && geoData.results.length > 0) {
+            latBase = geoData.results[0].latitude;
+            lngBase = geoData.results[0].longitude;
+            bbox = `${lngBase - 0.2},${latBase - 0.2},${lngBase + 0.2},${latBase + 0.2}`;
+          }
+
+          let osmTag = categoria === 'Cafeterías' ? 'cafe' : categoria === 'Miradores' ? 'viewpoint' : 'attraction';
+          const urlOSM = `https://nominatim.openstreetmap.org/search?format=json&amenity=${osmTag}&bounded=1&viewbox=${bbox}&countrycodes=mx&limit=5`;
+          
+          const resOSM = await fetch(urlOSM, { headers: { 'User-Agent': 'StopOverApp/1.0' } });
+          const dataOSM = await resOSM.json();
+
+          if (Array.isArray(dataOSM) && dataOSM.length > 0) {
+            const OSMValidos = dataOSM
+              .filter(item => {
+                const nombre = item.display_name.split(',')[0].toLowerCase();
+                return nombre !== 'cafe' && nombre !== 'mirador';
+              })
+              .map((item, idx) => ({
+                id: item.place_id || (5000 + idx),
+                nombre: item.display_name.split(',')[0],
+                ubicacion: item.display_name,
+                rating: "4.8 ⭐",
+                icono: categoria === 'Cafeterías' ? '☕' : categoria === 'Miradores' ? '📸' : '✨',
+                latitud: parseFloat(item.lat),
+                longitud: parseFloat(item.lon),
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon),
+                esDeServidor: false
+              }));
+            listaFinal = [...listaFinal, ...OSMValidos];
+          }
+        } catch (mapErr) {
+          console.error("Error en mapa:", mapErr);
+        }
+      }
+
+      // 3. Respaldo por si todo falla
+      if (listaFinal.length === 0) {
+        listaFinal = [
+          {
+            id: 9999,
+            nombre: `${categoria === 'Cafeterías' ? 'Café Central' : 'Mirador'} de ${destinoRuta || 'Oaxaca'}`,
+            ubicacion: `Punto en la ruta hacia ${destinoRuta}`,
+            rating: "4.9 ⭐",
+            icono: categoria === 'Cafeterías' ? '☕' : '📸',
+            latitud: 17.0654,
+            longitud: -96.7236,
+            lat: 17.0654,
+            lng: -96.7236,
+            esDeServidor: false
+          }
+        ];
+      }
+
+      setRecomendaciones(listaFinal);
+      setCargando(false);
     };
 
-    cargarParadasInLaRuta = cargarParadasEnLaRuta();
+    cargarNegociosOficiales();
   }, [isOpen, categoria, destinoRuta]);
 
-  // BANCO DE PARADAS INTERMEDIAS REALES (Sobre la línea exacta del trayecto, sin pasarse del destino)
-  const obtenerParadasIntermediasReales = (destino, cat) => {
-    const d = destino.toLowerCase();
+  // FUNCIÓN OFICIAL PARA GUARDAR EN LA API DE EMMA
+  const manejarAgregarParada = async (item) => {
+    setGuardandoId(item.id);
 
-    // Si el viaje es hacia Lachigoló, Tule o zonas del Valle
-    if (d.includes('lachigoló') || d.includes('tule') || d.includes('mitla') || d.includes('tlacolula')) {
-      if (cat === 'Cafeterías') {
-        return [
-          { id: 501, nombre: "Café del Portal El Tule", ubicacion: "Santa María del Tule (En ruta)", rating: "4.8 ⭐", icono: "☕", latitud: 17.0465, longitud: -96.6358 },
-          { id: 502, nombre: "Cafetería Carretera 190", ubicacion: "Tlalixtac de Cabrera", rating: "4.7 ⭐", icono: "☕", latitud: 17.0700, longitud: -96.6700 }
-        ];
-      } else if (cat === 'Miradores') {
-        return [
-          { id: 503, nombre: "Mirador de Tlalixtac", ubicacion: "Entrada a Tlalixtac de Cabrera", rating: "4.9 ⭐", icono: "📸", latitud: 17.0750, longitud: -96.6650 }
-        ];
-      } else {
-        return [
-          { id: 504, nombre: "Punto Turístico El Tule", ubicacion: "Centro de Santa María del Tule", rating: "5.0 ⭐", icono: "✨", latitud: 17.0450, longitud: -96.6340 }
-        ];
+    try {
+      // Si tenemos un ID de ruta activa en el sistema y el negocio viene del servidor de Emma
+      if (rutaIdActiva && item.esDeServidor) {
+        // Consumimos el endpoint oficial de Emma: POST /api/negocios/{negocioId}/agregar-a-ruta/{rutaId}
+        await api.post(`/negocios/${item.id}/agregar-a-ruta/${rutaIdActiva}`);
       }
-    }
 
-    // Respaldo general sobre la zona metropolitana de Oaxaca
-    return cat === 'Cafeterías' ? [
-      { id: 601, nombre: "Café Brújula Centro", ubicacion: "Macedonio Alcalá, Oaxaca", rating: "4.9 ⭐", icono: "☕", latitud: 17.0625, longitud: -96.7214 }
-    ] : [
-      { id: 602, nombre: "Mirador Cerro del Fortín", ubicacion: "Oaxaca de Juárez", rating: "4.9 ⭐", icono: "📸", latitud: 17.0750, longitud: -96.7320 }
-    ];
+      // Ejecutamos la función padre para actualizar la UI instantáneamente
+      onAgregar({
+        ...item,
+        latitud: item.latitud || item.lat,
+        longitud: item.longitud || item.lng
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar la parada en la API de Emma:", error);
+      // Aunque falle por red o ID temporal, mandamos la parada al front para no bloquear al usuario
+      onAgregar(item);
+      onClose();
+    } finally {
+      setGuardandoId(null);
+    }
   };
 
   if (!isOpen) return null;
@@ -109,10 +160,10 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         {/* Cabecera */}
         <div className={`p-6 flex justify-between items-center ${isDarkMode ? 'bg-[#1E3324] border-b border-gray-700 text-white' : 'bg-[#2A4532] text-white'}`}>
           <div>
-            <span className="text-xs uppercase tracking-wider text-[#CBE3C7] font-bold">Optimizador de Trayecto ⚡</span>
-            <h3 className="text-xl font-bold">{categoria || 'Sugerencias'} en la Ruta</h3>
+            <span className="text-xs uppercase tracking-wider text-[#CBE3C7] font-bold">API PostgreSQL & Mapa ⚡</span>
+            <h3 className="text-xl font-bold">{categoria} en {destinoRuta}</h3>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-200'}`}>
-              {destinoRuta ? `Puntos intermedios hacia ${destinoRuta}` : "Sugerencias en ruta"}
+              Guardado oficial directo en la base de datos de la ruta
             </p>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl font-bold cursor-pointer">✕</button>
@@ -122,7 +173,7 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
         <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
           {cargando ? (
             <div className={`text-center py-8 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              🗺️ Filtrando paradas sobre la línea de ruta...
+              🔄 Consultando base de datos de Emma...
             </div>
           ) : recomendaciones.length > 0 ? (
             recomendaciones.map((item) => (
@@ -134,22 +185,23 @@ export default function RecommendationsModal({ isOpen, onClose, categoria, desti
                   <span className={`text-2xl p-2 rounded-xl shadow-xs ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>{item.icono}</span>
                   <div>
                     <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{item.nombre}</h4>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.ubicacion}</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{item.ubicacion}</p>
                     <span className="text-xs font-semibold text-[#F97316]">{item.rating}</span>
                   </div>
                 </div>
                 
                 <button 
-                  onClick={() => onAgregar(item)}
-                  className="bg-[#4F7959] hover:bg-[#2A4532] text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer shadow-sm"
+                  onClick={() => manejarAgregarParada(item)}
+                  disabled={guardandoId === item.id}
+                  className="bg-[#4F7959] hover:bg-[#2A4532] text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer shadow-sm shrink-0 ml-2 disabled:opacity-50"
                 >
-                  + Agregar
+                  {guardandoId === item.id ? 'Guardando...' : '+ Agregar'}
                 </button>
               </div>
             ))
           ) : (
             <div className={`text-center py-8 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              No hay paradas intermedias registradas para este tramo.
+              No hay negocios disponibles en esta zona.
             </div>
           )}
         </div>

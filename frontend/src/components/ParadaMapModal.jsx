@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Arreglo para los íconos de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -11,72 +10,100 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Componente para ajustar el mapa para que se vean ambos puntos
 function MapBounds({ routeCoords, origen, destino }) {
   const map = useMap();
   useEffect(() => {
-    if (routeCoords.length > 0) {
-      map.fitBounds(L.latLngBounds(routeCoords), { padding: [40, 40] });
+    if (routeCoords && routeCoords.length > 0) {
+      map.fitBounds(L.latLngBounds(routeCoords), { padding: [50, 50] });
     } else if (origen && destino) {
-      map.fitBounds(L.latLngBounds([origen, destino]), { padding: [40, 40] });
+      map.fitBounds(L.latLngBounds([origen, destino]), { padding: [50, 50] });
     }
   }, [map, routeCoords, origen, destino]);
   return null;
 }
 
-export default function ParadaMapModal({ isOpen, onClose, paradaNombre }) {
+export default function ParadaMapModal({ isOpen, onClose, paradaNombre, paradaLat, paradaLng }) {
   const [isDarkMode] = useState(() => localStorage.getItem('stopover_dark_mode') === 'true');
   
-  const [origenCoords, setOrigenCoords] = useState(null); // Ubicación real del usuario
-  const [destinoCoords, setDestinoCoords] = useState(null); // Ubicación de la parada
+  const [origenCoords, setOrigenCoords] = useState(null);
+  const [destinoCoords, setDestinoCoords] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
   const [distancia, setDistancia] = useState('');
   const [duracion, setDuracion] = useState('');
   const [cargando, setCargando] = useState(true);
 
-  // Diccionario de paradas para la presentación (coordenadas exactas para que no falle)
-  const coordenadasParadas = {
-    "Cafetería Centro Tehuacán": [18.4628, -97.3928],
-    "Café de la Brisa": [15.8596, -97.0722], // Pto Escondido
-    "Mirador Nochixtlán": [17.4566, -97.2255],
-    "Pueblo Mágico Sola de Vega": [16.5090, -96.9790],
-    "Café de Olla Tule": [17.0465, -96.6358],
-    "Mirador Valle": [17.0200, -96.6000],
-    "Gasolinera G500": [17.0700, -96.7200],
-  };
-
   useEffect(() => {
-    if (isOpen && paradaNombre) {
-      setCargando(true);
-      
-      // 1. Obtener coordenadas de la parada (si no existe en el dic, usa una genérica cerca de Oaxaca)
-      const coordsParada = coordenadasParadas[paradaNombre] || [17.0654, -96.7236];
-      setDestinoCoords(coordsParada);
+    if (!isOpen) return;
 
-      // 2. Pedir GPS del usuario
+    setCargando(true);
+
+    const inicializarMapaEstrictoOaxaca = async () => {
+      let latFinal = parseFloat(paradaLat);
+      let lngFinal = parseFloat(paradaLng);
+
+      // Si las coordenadas son inválidas o vienen nulas, hacemos una búsqueda ultra estricta amarrada a Oaxaca, México
+      if (!latFinal || !lngFinal || isNaN(latFinal) || isNaN(lngFinal)) {
+        try {
+          const queryEstricta = `${paradaNombre}, Oaxaca, Mexico`;
+          const resGeo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryEstricta)}&countrycodes=mx&limit=1`);
+          const dataGeo = await resGeo.json();
+          
+          if (Array.isArray(dataGeo) && dataGeo.length > 0) {
+            latFinal = parseFloat(dataGeo[0].lat);
+            lngFinal = parseFloat(dataGeo[0].lon);
+          } else {
+            // Coordenada por defecto en el centro de Oaxaca si de plano no existe
+            latFinal = 17.0654;
+            lngFinal = -96.7236;
+          }
+        } catch (e) {
+          console.error("Error en geocodificación estricta:", e);
+          latFinal = 17.0654;
+          lngFinal = -96.7236;
+        }
+      }
+
+      const destinoReal = [latFinal, lngFinal];
+      setDestinoCoords(destinoReal);
+
+      // Obtener GPS del usuario en tiempo real
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const userLocation = [pos.coords.latitude, pos.coords.longitude];
             setOrigenCoords(userLocation);
-            calcularRuta(userLocation, coordsParada);
+            calcularRutaOSRM(userLocation, destinoReal);
           },
           (err) => {
-            console.warn("GPS denegado o falló, usando ubicación por defecto.", err);
-            const defaultLocation = [17.0500, -96.7000]; // Zócalo Oaxaca
-            setOrigenCoords(defaultLocation);
-            calcularRuta(defaultLocation, coordsParada);
-          }
+            console.warn("GPS denegado, usando Oaxaca centro.", err);
+            const fallback = [17.0654, -96.7236];
+            setOrigenCoords(fallback);
+            calcularRutaOSRM(fallback, destinoReal);
+          },
+          { enableHighAccuracy: true }
         );
-      } else {
-        const defaultLocation = [17.0500, -96.7000];
-        setOrigenCoords(defaultLocation);
-        calcularRuta(defaultLocation, coordsParada);
-      }
-    }
-  }, [isOpen, paradaNombre]);
 
-  const calcularRuta = async (origen, destino) => {
+        const watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const liveLocation = [pos.coords.latitude, pos.coords.longitude];
+            setOrigenCoords(liveLocation);
+          },
+          (err) => console.error("Error watchPosition:", err),
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        );
+
+        return () => navigator.geolocation.clearWatch(watchId);
+      } else {
+        const fallback = [17.0654, -96.7236];
+        setOrigenCoords(fallback);
+        calcularRutaOSRM(fallback, destinoReal);
+      }
+    };
+
+    inicializarMapaEstrictoOaxaca();
+  }, [isOpen, paradaNombre, paradaLat, paradaLng]);
+
+  const calcularRutaOSRM = async (origen, destino) => {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${origen[1]},${origen[0]};${destino[1]},${destino[0]}?overview=full&geometries=geojson`;
       const res = await fetch(url);
@@ -92,7 +119,7 @@ export default function ParadaMapModal({ isOpen, onClose, paradaNombre }) {
         setDuracion(`${horas > 0 ? horas + ' h ' : ''}${minutos} m`);
       }
     } catch (err) {
-      console.error("Error obteniendo ruta", err);
+      console.error("Error OSRM:", err);
     } finally {
       setCargando(false);
     }
@@ -106,41 +133,39 @@ export default function ParadaMapModal({ isOpen, onClose, paradaNombre }) {
         
         <div className={`px-6 py-4 flex justify-between items-center ${isDarkMode ? 'bg-[#1E3324] border-b border-gray-700 text-white' : 'bg-[#2A4532] text-white'}`}>
           <div>
-            <h3 className="text-lg font-bold">Navegación hacia parada</h3>
-            <p className="text-xs text-gray-300">Ruta desde tu ubicación actual</p>
+            <h3 className="text-lg font-bold">Navegación en Vivo hacia Parada 🛰️</h3>
+            <p className="text-xs text-gray-200">Ubicación real en Oaxaca y GPS activo</p>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl font-bold cursor-pointer">✕</button>
         </div>
 
         <div className="p-6 flex flex-col gap-4">
           
-          {/* Tarjeta de info */}
           <div className={`flex justify-between items-center p-4 rounded-2xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎯</span>
               <div>
                 <h4 className="font-bold text-sm">{paradaNombre}</h4>
                 {cargando ? (
-                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Calculando ruta y tráfico...</p>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Verificando coordenadas en Oaxaca...</p>
                 ) : (
                   <p className={`text-xs font-semibold ${isDarkMode ? 'text-emerald-400' : 'text-[#4F7959]'}`}>
-                    A {duracion} ({distancia}) de ti.
+                    A {duracion} ({distancia}) de tu ubicación.
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Mapa */}
           <div className="relative w-full h-80 rounded-2xl overflow-hidden border shadow-inner z-10">
             {cargando ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 z-20">
-                <span className="animate-pulse font-bold text-gray-500">Obteniendo señal GPS...</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/60 dark:bg-gray-900/60 z-20">
+                <span className="animate-pulse font-bold text-emerald-600 dark:text-emerald-400">🗺️ Localizando punto exacto en Oaxaca...</span>
               </div>
             ) : (
               <MapContainer 
-                center={origenCoords || [17.0654, -96.7236]} 
-                zoom={13} 
+                center={destinoCoords || [17.0654, -96.7236]} 
+                zoom={14} 
                 style={{ width: '100%', height: '100%' }}
               >
                 <MapBounds routeCoords={routeCoords} origen={origenCoords} destino={destinoCoords} />
@@ -149,21 +174,18 @@ export default function ParadaMapModal({ isOpen, onClose, paradaNombre }) {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 
-                {/* Tu ubicación */}
                 {origenCoords && (
                   <Marker position={origenCoords}>
                     <Popup>📍 Tu ubicación actual</Popup>
                   </Marker>
                 )}
 
-                {/* Destino de la parada */}
                 {destinoCoords && (
                   <Marker position={destinoCoords}>
-                    <Popup>🎯 {paradaNombre}</Popup>
+                    <Popup>🎯 {paradaNombre} (Oaxaca)</Popup>
                   </Marker>
                 )}
 
-                {/* Trazado de ruta */}
                 {routeCoords.length > 0 && (
                   <Polyline positions={routeCoords} color="#3B82F6" weight={5} />
                 )}

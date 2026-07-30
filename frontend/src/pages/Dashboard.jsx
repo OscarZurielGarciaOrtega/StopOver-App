@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import api from '../api/axios'; // Importación de la API configurada
 import DetailModal from '../components/DetailModal';
 import RecommendationsModal from '../components/RecommendationsModal';
 
@@ -20,46 +21,57 @@ function ChangeView({ center }) {
 }
 
 export default function Dashboard() {
-  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL (Sincronizado con localStorage)
+  // 🌙 ESTADO PARA EL MODO OSCURO GLOBAL
   const [isDarkMode] = useState(() => {
     return localStorage.getItem('stopover_dark_mode') === 'true';
   });
 
-  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47';
-  });
+  // 👤 CARGAR PERFIL DESDE LOCALSTORAGE (SIN IMAGEN DE PRUEBA)
   const [nombre, setNombre] = useState(() => {
-    return localStorage.getItem('stopover_user_nombre') || 'Maria A';
+    return localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero';
   });
 
-  // 🔔 ESCUCHAR EN TIEMPO REAL SI EL USUARIO CAMBIA SU FOTO O NOMBRE EN AJUSTES
   useEffect(() => {
     const handleProfileChange = () => {
-      setAvatar(localStorage.getItem('stopover_user_avatar') || 'https://i.pravatar.cc/150?img=47');
-      setNombre(localStorage.getItem('stopover_user_nombre') || 'Maria A');
+      setNombre(localStorage.getItem('nombre') || localStorage.getItem('email') || 'Viajero');
     };
     window.addEventListener('user_profile_updated', handleProfileChange);
     return () => window.removeEventListener('user_profile_updated', handleProfileChange);
   }, []);
 
-  // PERSISTENCIA REAL: Carga las rutas del navegador o usa las por defecto
-  const [rutas, setRutas] = useState(() => {
-    const guardadas = localStorage.getItem('stopover_rutas_reales');
-    if (guardadas) {
+  // 🚀 ESTADOS PARA RUTAS REALES DESDE EL BACKEND
+  const [rutas, setRutas] = useState([]);
+  const [loadingRutas, setLoadingRutas] = useState(true);
+
+  useEffect(() => {
+    const cargarRutas = async () => {
+      setLoadingRutas(true);
       try {
-        return JSON.parse(guardadas);
-      } catch (e) {
-        console.error("Error al leer localStorage", e);
+        const response = await api.get('/rutas');
+        
+        const data = response.data.content || response.data;
+        
+        if (Array.isArray(data)) {
+          const rutasFormateadas = data.map(ruta => ({
+            id: `#ST-${ruta.id}`,
+            idReal: ruta.id,
+            origen: ruta.origen,
+            destino: ruta.destino,
+            escala: ruta.paradas && ruta.paradas.length > 0 ? ruta.paradas.map(p => p.nombre).join(', ') : 'Directo (Sin escala)',
+            duracion: ruta.fecha_salida || 'Por definir',
+            estatus: 'Programado' 
+          }));
+          setRutas(rutasFormateadas);
+        }
+      } catch (error) {
+        console.error("Error al cargar rutas del servidor:", error);
+      } finally {
+        setLoadingRutas(false);
       }
-    }
-    return [
-      { id: '#ST-901', origen: 'Oaxaca', destino: 'Puebla', escala: 'Cafetería Centro Tehuacán', duracion: '4 h 15 m', estatus: 'En Tránsito' },
-      { id: '#ST-902', origen: 'Oaxaca', destino: 'CDMX', escala: 'Mirador Nochixtlán', duracion: '6 h 30 m', estatus: 'Completado' },
-      { id: '#ST-903', origen: 'Puebla', destino: 'CDMX', escala: 'Directo (Sin escala)', duracion: '2 h 00 m', estatus: 'Completado' },
-      { id: '#ST-904', origen: 'Oaxaca', destino: 'Pto. Escondido', escala: 'Pueblo Mágico Sola de Vega', duracion: '3 h 45 m', estatus: 'Retrasado' },
-    ];
-  });
+    };
+
+    cargarRutas();
+  }, []);
 
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [origenTexto, setOrigenTexto] = useState('Oaxaca de Juárez, México');
@@ -75,7 +87,6 @@ export default function Dashboard() {
   const [distanciaKm, setDistanciaKm] = useState(null);
   const [duracionTexto, setDuracionTexto] = useState(null);
 
-  // Estados para el modal de Ver Detalle
   const [rutaSeleccionada, setRutaSeleccionada] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -90,7 +101,6 @@ export default function Dashboard() {
   const [paginaActual, setPaginaActual] = useState(1);
   const rutasPorPagina = 4;
   
-  // 🧮 FILTRAR RUTAS SEGÚN BÚSQUEDA Y ESTATUS
   const rutasFiltradas = rutas.filter(ruta => {
     const textoMatch = 
       ruta.id.toLowerCase().includes(busquedaTexto.toLowerCase()) ||
@@ -103,18 +113,17 @@ export default function Dashboard() {
     return textoMatch && estatusMatch;
   });
 
-  // Calcular qué rutas mostrar en la página actual usando el arreglo filtrado
   const indiceUltimaRuta = paginaActual * rutasPorPagina;
   const indicePrimeraRuta = indiceUltimaRuta - rutasPorPagina;
   const rutasActuales = rutasFiltradas.slice(indicePrimeraRuta, indiceUltimaRuta);
   const totalPaginas = Math.ceil(rutasFiltradas.length / rutasPorPagina) || 1;
 
-  // 📊 LÓGICA DE TENDENCIAS INTELIGENTES
-  const totalViajerosHoy = 240 + (rutas.length * 13);
+  // 📊 LÓGICA DE TENDENCIAS INTELIGENTES (100% DINÁMICO)
+  const totalViajerosHoy = rutas.length > 0 ? rutas.length * 3 : 0;
 
   const conteoEscalas = {};
   rutas.forEach(r => {
-    if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo')) {
+    if (r.escala && !r.escala.includes('km') && !r.escala.includes('Directo') && !r.escala.includes('Por definir')) {
       r.escala.split(',').forEach(parada => {
         const pLimpia = parada.trim();
         conteoEscalas[pLimpia] = (conteoEscalas[pLimpia] || 0) + 1;
@@ -122,14 +131,16 @@ export default function Dashboard() {
     }
   });
 
-  let paradaMasGuardada = "Mural del Centro";
+  let paradaMasGuardada = "Aún no hay paradas registradas";
   let maxRepeticiones = 0;
-  Object.keys(conteoEscalas).forEach(parada => {
-    if (conteoEscalas[parada] > maxRepeticiones) {
-      maxRepeticiones = conteoEscalas[parada];
-      paradaMasGuardada = parada;
-    }
-  });
+  if (Object.keys(conteoEscalas).length > 0) {
+    Object.keys(conteoEscalas).forEach(parada => {
+      if (conteoEscalas[parada] > maxRepeticiones) {
+        maxRepeticiones = conteoEscalas[parada];
+        paradaMasGuardada = parada;
+      }
+    });
+  }
 
   const abrirRecomendaciones = (categoria) => {
     setCategoriaSeleccionada(categoria);
@@ -138,20 +149,15 @@ export default function Dashboard() {
 
   const agregarParadaARuta = (paradaSeleccionada) => {
     const rutasActualizadas = [...rutas];
-    
     if (rutasActualizadas.length > 0) {
       const rutaActiva = rutasActualizadas[0];
-      
       if (rutaActiva.escala.includes('km') || rutaActiva.escala.includes('Directo')) {
         rutaActiva.escala = paradaSeleccionada.nombre;
       } else {
         rutaActiva.escala = rutaActiva.escala + ', ' + paradaSeleccionada.nombre;
       }
-      
       setRutas(rutasActualizadas);
-      localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
     }
-    
     setIsRecModalOpen(false);
   };
 
@@ -159,9 +165,7 @@ export default function Dashboard() {
     const rutasActualizadas = rutas.map(ruta => 
       ruta.id === idRuta ? { ...ruta, estatus: 'Cancelado' } : ruta
     );
-    
     setRutas(rutasActualizadas);
-    localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
     setIsDetailModalOpen(false);
   };
 
@@ -225,9 +229,11 @@ export default function Dashboard() {
 
   const getStatusClass = (estatus) => {
     switch (estatus) {
+      case 'Programado': return 'bg-purple-100 text-purple-700';
       case 'En Tránsito': return 'bg-green-100 text-green-700';
       case 'Completado': return 'bg-blue-100 text-blue-700';
       case 'Retrasado': return 'bg-red-100 text-red-700';
+      case 'Cancelado': return 'bg-gray-200 text-gray-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -246,9 +252,12 @@ export default function Dashboard() {
           </svg>
           <h1 className="text-2xl font-bold">StopOver</h1>
         </div>
+        
+        {/* MAGIA AQUÍ: CÍRCULO CON INICIAL EN VEZ DE IMAGEN */}
         <div className="flex items-center gap-3">
-          {/* AQUÍ ESTÁ EL CAMBIO DE LA FOTO Y NOMBRE DE PERFIL */}
-          <img src={avatar} alt="Perfil" className="w-10 h-10 rounded-full border-2 border-gray-300 object-cover bg-white" />
+          <div className="w-10 h-10 rounded-full bg-[#2A4532] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {nombre.charAt(0).toUpperCase()}
+          </div>
           <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{nombre}</span>
         </div>
       </header>
@@ -335,7 +344,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Rutas recientes</h2>
-              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Basado en tu ruta de Oaxaca a Puebla</p>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Explora tus viajes planeados</p>
             </div>
             <button 
               onClick={() => {
@@ -346,7 +355,7 @@ export default function Dashboard() {
               }}
               className="bg-[#2A4532] text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[#1E3324] transition-colors shadow-md cursor-pointer"
             >
-              <span className="text-xl leading-none">+</span> Planear nueva parada
+              <span className="text-xl leading-none">+</span> Planear nueva ruta
             </button>
           </div>
 
@@ -370,13 +379,10 @@ export default function Dashboard() {
               className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}
             >
               <option value="Todos">Estatus: Todos</option>
+              <option value="Programado">Programado</option>
               <option value="En Tránsito">En Tránsito</option>
               <option value="Completado">Completado</option>
-              <option value="Retrasado">Retrasado</option>
               <option value="Cancelado">Cancelado</option>
-            </select>
-            <select className={`border rounded-lg px-4 py-2 focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'border-gray-300 text-gray-700'}`}>
-              <option>📅 Esta semana</option>
             </select>
           </div>
 
@@ -387,18 +393,24 @@ export default function Dashboard() {
                   <th className="py-3 px-2 font-medium">ID Ruta</th>
                   <th className="py-3 px-2 font-medium">Origen - Destino</th>
                   <th className="py-3 px-2 font-medium">Escala / Parada</th>
-                  <th className="py-3 px-2 font-medium">Duración</th>
+                  <th className="py-3 px-2 font-medium">Salida</th>
                   <th className="py-3 px-2 font-medium">Estatus</th>
                   <th className="py-3 px-2 font-medium">Acción</th>
                 </tr>
               </thead>
               <tbody>
-                {rutasActuales.length > 0 ? (
+                {loadingRutas ? (
+                  <tr>
+                    <td colSpan="6" className={`text-center py-8 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Sincronizando rutas con el servidor...
+                    </td>
+                  </tr>
+                ) : rutasActuales.length > 0 ? (
                   rutasActuales.map((ruta, index) => (
                     <tr key={index} className={`border-b text-sm transition-colors ${isDarkMode ? 'border-gray-800 text-gray-200 hover:bg-gray-800/50' : 'border-gray-100 text-gray-800 hover:bg-gray-50'}`}>
-                      <td className="py-4 px-2">{ruta.id}</td>
+                      <td className="py-4 px-2 font-medium">{ruta.id}</td>
                       <td className="py-4 px-2">{ruta.origen} → {ruta.destino}</td>
-                      <td className="py-4 px-2">{ruta.escala}</td>
+                      <td className="py-4 px-2 text-gray-500">{ruta.escala}</td>
                       <td className="py-4 px-2">{ruta.duracion}</td>
                       <td className="py-4 px-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(ruta.estatus)}`}>
@@ -421,7 +433,9 @@ export default function Dashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-400 text-sm">No se encontraron rutas que coincidan con tu búsqueda.</td>
+                    <td colSpan="6" className={`text-center py-8 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Aún no tienes rutas registradas. ¡Planea tu primer viaje!
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -491,15 +505,15 @@ export default function Dashboard() {
 
             <div className="flex-1 flex justify-center">
               <div className={`rounded-3xl shadow-lg border p-8 w-full max-w-sm h-full flex flex-col justify-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-                <h3 className={`text-center font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Tendencia ahora</h3>
+                <h3 className={`text-center font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Tus Estadísticas</h3>
                 <ul className={`space-y-6 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   <li className="flex gap-2">
                     <span className="text-[#2A4532] mt-1">•</span>
-                    {totalViajerosHoy} viajeros exploraron Oaxaca hoy
+                    {rutas.length > 0 ? `Tienes ${rutas.length} viajes registrados en total.` : 'Aún no tienes viajes registrados.'}
                   </li>
                   <li className="flex gap-2">
                     <span className="text-[#2A4532] mt-1">•</span>
-                    "{paradaMasGuardada}" es la parada más guardada esta semana
+                    Parada favorita: {paradaMasGuardada}
                   </li>
                 </ul>
               </div>
@@ -572,7 +586,7 @@ export default function Dashboard() {
                       buscarLugarAPI(val, setSugerenciasDestino);
                     }}
                     placeholder="Escribe destino..." 
-                    className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                    className={`w-full border rounded-xl py-2.5 px-4 text-sm font-semibold focus:outline-none focus:border-[#2A4532] ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
                   />
 
                   {sugerenciasDestino.length > 0 && (
@@ -643,26 +657,39 @@ export default function Dashboard() {
                 >
                   Cancelar
                 </button>
+                
+                {/* MAGIA AQUÍ: PETICIÓN REAL POST AL BACKEND */}
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     if (!origenTexto || !destinoCoords) {
                       alert('Por favor selecciona un destino válido de la lista.');
                       return;
                     }
-                    const nuevaRutaObj = {
-                      id: `#ST-90${rutas.length + 1}`,
-                      origen: origenTexto.split(',')[0],
-                      destino: destinoTexto.split(',')[0],
-                      escala: `${distanciaKm || '0'} km por carretera`,
-                      duracion: duracionTexto || 'Calculado',
-                      estatus: 'En Tránsito'
-                    };
                     
-                    const rutasActualizadas = [nuevaRutaObj, ...rutas];
-                    setRutas(rutasActualizadas);
-                    localStorage.setItem('stopover_rutas_reales', JSON.stringify(rutasActualizadas));
+                    try {
+                      const fechaActual = new Date().toISOString().split('T')[0];
+                      
+                      // Hacemos el POST real a la base de datos
+                      await api.post('/rutas', {
+                        nombre: `Viaje a ${destinoTexto.split(',')[0]}`,
+                        origen: origenTexto.split(',')[0],
+                        destino: destinoTexto.split(',')[0],
+                        fechaSalida: fechaActual, // <-- ¡MAGIA APLICADA AQUÍ! (camelCase)
+                        paradaIds: [] // Arreglo vacío
+                      });
 
-                    setIsMapModalOpen(false);
+                      setIsMapModalOpen(false);
+                      // Refrescamos la pantalla para que el GET jale la ruta recién creada
+                      window.location.reload(); 
+                      
+                    } catch (error) {
+                      console.error("Error al guardar la ruta en el servidor:", error.response?.data);
+                      
+                      // EXTRAEMOS EL MENSAJE PARA EL ALERT
+                      const mensajeBackend = error.response?.data?.mensajes?.[0] || error.response?.data?.message || 'Error de formato (400)';
+                      
+                      alert(`El servidor rechazó los datos:\n👉 ${mensajeBackend}\n\nRecuerda decirle a Emma que quite la validación del arreglo vacío en las paradas.`);
+                    }
                   }}
                   className="bg-[#2A4532] hover:bg-[#1E3324] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer"
                 >
@@ -679,7 +706,7 @@ export default function Dashboard() {
       <DetailModal 
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
-        rutaId={rutaSeleccionada ? rutaSeleccionada.id : null}
+        rutaId={rutaSeleccionada ? rutaSeleccionada.idReal : null}
         onCancelar={() => rutaSeleccionada && cancelarRuta(rutaSeleccionada.id)}
       />
 

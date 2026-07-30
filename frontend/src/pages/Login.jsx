@@ -36,19 +36,19 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Petición real al backend de Emma en el puerto 9000 / dominio seguro
+      // Petición real al backend de Emma
       const response = await api.post('/auth/login', { email, password });
       
-      // Guardamos el token real y el rol que regresa el servidor
+      // Guardamos el token, rol y correo en el localStorage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('rol', response.data.rol);
+      localStorage.setItem('nombre', email); // <-- AQUÍ SE GUARDA TU CORREO PARA EL DASHBOARD
       
       // Mandamos al usuario a su respectiva ruta o dashboard
       navigate('/nueva-ruta');
     } catch (err) {
       console.error(err);
       
-      // AQUÍ ESTÁ EL CAMBIO: Leemos el error estandarizado de Emma
       const mensajeError = err.response?.data?.mensajes?.[0] || 'Credenciales incorrectas o error al conectar con el servidor';
       setServerError(mensajeError);
       
@@ -78,7 +78,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* AQUÍ ESTÁ LA MAGIA: Agregamos noValidate para quitar el tooltip gris del navegador */}
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             
             <div>
@@ -89,7 +88,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    if (errors.email) setErrors({ ...errors, email: '' }); // Limpia el error al escribir
+                    if (errors.email) setErrors({ ...errors, email: '' });
                   }}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.email ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
                   placeholder="admin@stopover.com"
@@ -111,7 +110,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    if (errors.password) setErrors({ ...errors, password: '' }); // Limpia el error al escribir
+                    if (errors.password) setErrors({ ...errors, password: '' });
                   }}
                   className={`w-full px-4 py-3 rounded-xl border-2 ${errors.password ? 'border-red-500' : 'border-gray-200'} focus:outline-none focus:border-[#4F7959] shadow-sm`}
                   placeholder="••••••••"
@@ -137,7 +136,7 @@ export default function Login() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-4 rounded-xl transition-colors shadow-md disabled:opacity-50"
+              className="w-full bg-[#4F7959] hover:bg-[#3D5E45] text-white font-bold py-4 rounded-xl transition-colors shadow-md disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'CONECTANDO...' : 'ENTRAR'}
             </button>
